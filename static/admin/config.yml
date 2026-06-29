@@ -2,6 +2,8 @@ backend:
   name: github
   repo: nasplayer/my-blog
   branch: main
+  base_url: https://my-blog-7ag.pages.dev
+  auth_endpoint: api/auth
 
 media_folder: "static/images"
 public_folder: "/images"
@@ -24,7 +26,7 @@ collections:
     label: "页面"
     folder: "content"
     create: true
-    slug: "{{slug}}"
+    slug: "{{slug}"
     fields:
       - {label: "标题", name: "title", widget: "string"}
       - {label: "正文", name: "body", widget: "markdown"}
