@@ -5,53 +5,212 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>博客管理后台</title>
   <style>
-    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    #loading { 
-      position: fixed; 
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: #f5f5f5;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-    }
-    #loading.hidden { display: none; }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid #e0e0e0;
-      border-top-color: #666;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    p { margin-top: 20px; color: #666; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { background: #24292e; color: white; padding: 20px; margin-bottom: 20px; }
+    .header h1 { font-size: 24px; }
+    .login-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+    .login-btn:hover { background: #218838; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .posts-list { list-style: none; }
+    .posts-list li { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .posts-list li:last-child { border-bottom: none; }
+    .post-title { font-weight: 500; color: #24292e; }
+    .post-date { color: #666; font-size: 14px; }
+    .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: #0366d6; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .editor textarea { width: 100%; min-height: 400px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px; }
+    .editor input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; font-size: 16px; }
+    .actions { margin-top: 15px; }
+    .hidden { display: none; }
+    .error { color: #dc3545; padding: 10px; background: #ffeef0; border-radius: 6px; margin-bottom: 15px; }
+    .success { color: #28a745; padding: 10px; background: #f0fff4; border-radius: 6px; margin-bottom: 15px; }
   </style>
 </head>
 <body>
-  <div id="loading">
-    <div class="spinner"></div>
-    <p>加载中...</p>
+  <div class="header">
+    <div class="container">
+      <h1>📝 博客管理后台</h1>
+    </div>
   </div>
-  <script>
-    (function() {
-      // 检查 URL 中的 token
-      var params = new URLSearchParams(window.location.search);
-      var token = params.get('token');
+  
+  <div class="container">
+    <div id="login-section" class="card">
+      <h2>使用 GitHub 登录</h2>
+      <p style="margin: 15px 0; color: #666;">需要 GitHub Personal Access Token (需要 repo 权限)</p>
+      <input type="password" id="token-input" placeholder="输入 GitHub Token" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px;">
+      <button class="login-btn" onclick="login()">登录</button>
+      <p id="login-error" class="error hidden"></p>
+    </div>
+    
+    <div id="main-section" class="hidden">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2>文章列表</h2>
+          <button class="btn btn-primary" onclick="newPost()">+ 新建文章</button>
+        </div>
+        <ul id="posts-list" class="posts-list"></ul>
+      </div>
       
-      if (token) {
-        // 存储 token 到 localStorage
-        localStorage.setItem('netlify-cms-user', JSON.stringify({token: token}));
-        localStorage.setItem('gh-oauth-token', token);
-        // 移除 URL 中的 token 参数
-        window.history.replaceState({}, '', '/admin/');
-      }
-    })();
-  </script>
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+      <div id="editor-section" class="card hidden">
+        <h2 id="editor-title">编辑文章</h2>
+        <div class="editor">
+          <input type="text" id="post-filename" placeholder="文件名 (如: my-post.md)">
+          <textarea id="post-content" placeholder="文章内容..."></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="savePost()">保存</button>
+          <button class="btn" onclick="cancelEdit()">取消</button>
+        </div>
+        <p id="editor-message"></p>
+      </div>
+    </div>
+  </div>
+
   <script>
-    setTimeout(function() {
-      document.getElementById('loading').classList.add('hidden');
-    }, 3000);
+    const REPO = 'nasplayer/my-blog';
+    const BRANCH = 'main';
+    const CONTENT_PATH = 'content/posts';
+    let token = '';
+    
+    function login() {
+      token = document.getElementById('token-input').value.trim();
+      if (!token) {
+        showError('请输入 Token');
+        return;
+      }
+      loadPosts();
+    }
+    
+    function showError(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    
+    async function api(path, options = {}) {
+      const res = await fetch(`https://api.github.com${path}`, {
+        ...options,
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          ...options.headers
+        }
+      });
+      return res;
+    }
+    
+    async function loadPosts() {
+      try {
+        const res = await api(`/repos/${REPO}/contents/${CONTENT_PATH}?ref=${BRANCH}`);
+        if (!res.ok) throw new Error('加载失败');
+        
+        const files = await res.json();
+        const posts = files.filter(f => f.name.endsWith('.md'));
+        
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('main-section').classList.remove('hidden');
+        
+        const list = document.getElementById('posts-list');
+        list.innerHTML = posts.map(p => `
+          <li>
+            <span class="post-title">${p.name}</span>
+            <div>
+              <button class="btn btn-primary" onclick="editPost('${p.name}')">编辑</button>
+            </div>
+          </li>
+        `).join('') || '<li style="color: #666;">暂无文章</li>';
+      } catch (e) {
+        showError('Token 无效或无权限: ' + e.message);
+      }
+    }
+    
+    async function editPost(filename) {
+      try {
+        const res = await api(`/repos/${REPO}/contents/${CONTENT_PATH}/${filename}?ref=${BRANCH}`);
+        const data = await res.json();
+        const content = atob(data.content);
+        
+        document.getElementById('post-filename').value = filename;
+        document.getElementById('post-content').value = content;
+        document.getElementById('editor-title').textContent = '编辑: ' + filename;
+        document.getElementById('editor-section').classList.remove('hidden');
+      } catch (e) {
+        alert('加载失败: ' + e.message);
+      }
+    }
+    
+    function newPost() {
+      const today = new Date().toISOString().slice(0, 10);
+      const defaultContent = `---
+title: "新文章"
+date: ${today}
+tags: []
+categories: []
+---
+
+在这里写正文...`;
+      
+      document.getElementById('post-filename').value = `${today}-new-post.md`;
+      document.getElementById('post-content').value = defaultContent;
+      document.getElementById('editor-title').textContent = '新建文章';
+      document.getElementById('editor-section').classList.remove('hidden');
+    }
+    
+    async function savePost() {
+      const filename = document.getElementById('post-filename').value.trim();
+      const content = document.getElementById('post-content').value;
+      
+      if (!filename) {
+        alert('请输入文件名');
+        return;
+      }
+      
+      try {
+        // 先获取文件 sha (如果存在)
+        let sha = null;
+        const checkRes = await api(`/repos/${REPO}/contents/${CONTENT_PATH}/${filename}?ref=${BRANCH}`);
+        if (checkRes.ok) {
+          const data = await checkRes.json();
+          sha = data.sha;
+        }
+        
+        const body = {
+          message: sha ? `Update ${filename}` : `Create ${filename}`,
+          content: btoa(unescape(encodeURIComponent(content))),
+          branch: BRANCH
+        };
+        if (sha) body.sha = sha;
+        
+        const res = await api(`/repos/${REPO}/contents/${CONTENT_PATH}/${filename}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        if (!res.ok) throw new Error('保存失败');
+        
+        document.getElementById('editor-message').innerHTML = '<span class="success">保存成功！</span>';
+        setTimeout(() => {
+          document.getElementById('editor-section').classList.add('hidden');
+          loadPosts();
+        }, 1000);
+      } catch (e) {
+        alert('保存失败: ' + e.message);
+      }
+    }
+    
+    function cancelEdit() {
+      document.getElementById('editor-section').classList.add('hidden');
+    }
+    
+    // 检查 localStorage 中是否有 token
+    const savedToken = localStorage.getItem('gh-oauth-token');
+    if (savedToken) {
+      document.getElementById('token-input').value = savedToken;
+    }
   </script>
 </body>
 </html>
