@@ -4,8 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>博客管理后台</title>
+  <style>
+    body { margin: 0; padding: 0; }
+    #loading { 
+      position: fixed; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%);
+      font-family: sans-serif;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
+  <div id="loading">加载中...</div>
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <script>
+    // 监听 OAuth 消息
+    window.addEventListener('message', function(event) {
+      console.log('Received message:', event.data);
+      if (event.data && event.data.type === 'authorization:github:oauth-token') {
+        console.log('OAuth token received');
+      }
+    });
+    // CMS 加载完成后隐藏 loading
+    setTimeout(function() {
+      document.getElementById('loading').style.display = 'none';
+    }, 2000);
+  </script>
 </body>
 </html>
