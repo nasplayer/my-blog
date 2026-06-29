@@ -2,8 +2,8 @@ backend:
   name: github
   repo: nasplayer/my-blog
   branch: main
-  base_url: https://my-blog-7ag.pages.dev
-  auth_endpoint: /api/auth
+  base_url: https://cms-oauth.nasplayer.workers.dev
+  auth_endpoint: auth
 
 media_folder: "static/images"
 public_folder: "/images"
