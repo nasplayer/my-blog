@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://nasplayer.github.io/sitemap.xml
