@@ -17,16 +17,15 @@
     .posts-list li { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .posts-list li:last-child { border-bottom: none; }
     .post-title { font-weight: 500; color: #24292e; }
-    .post-date { color: #666; font-size: 14px; }
     .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; }
     .btn-primary { background: #0366d6; color: white; }
-    .btn-danger { background: #dc3545; color: white; }
-    .editor textarea { width: 100%; min-height: 400px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px; }
+    .editor textarea { width: 100%; min-height: 400px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px; resize: vertical; }
     .editor input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; font-size: 16px; }
     .actions { margin-top: 15px; }
     .hidden { display: none; }
     .error { color: #dc3545; padding: 10px; background: #ffeef0; border-radius: 6px; margin-bottom: 15px; }
     .success { color: #28a745; padding: 10px; background: #f0fff4; border-radius: 6px; margin-bottom: 15px; }
+    .tip { color: #666; font-size: 14px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -39,7 +38,7 @@
   <div class="container">
     <div id="login-section" class="card">
       <h2>使用 GitHub 登录</h2>
-      <p style="margin: 15px 0; color: #666;">需要 GitHub Personal Access Token (需要 repo 权限)</p>
+      <p class="tip">需要 GitHub Personal Access Token (需要 repo 权限)</p>
       <input type="password" id="token-input" placeholder="输入 GitHub Token" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px;">
       <button class="login-btn" onclick="login()">登录</button>
       <p id="login-error" class="error hidden"></p>
@@ -61,7 +60,7 @@
           <textarea id="post-content" placeholder="文章内容..."></textarea>
         </div>
         <div class="actions">
-          <button class="btn btn-primary" onclick="savePost()">保存</button>
+          <button class="btn btn-primary" onclick="savePost()">保存并发布</button>
           <button class="btn" onclick="cancelEdit()">取消</button>
         </div>
         <p id="editor-message"></p>
@@ -75,12 +74,27 @@
     const CONTENT_PATH = 'content/posts';
     let token = '';
     
+    // Base64 解码 UTF-8
+    function decodeBase64(str) {
+      try {
+        return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+      } catch(e) {
+        return atob(str);
+      }
+    }
+    
+    // Base64 编码 UTF-8
+    function encodeBase64(str) {
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+    
     function login() {
       token = document.getElementById('token-input').value.trim();
       if (!token) {
         showError('请输入 Token');
         return;
       }
+      localStorage.setItem('gh-oauth-token', token);
       loadPosts();
     }
     
@@ -131,12 +145,13 @@
       try {
         const res = await api(`/repos/${REPO}/contents/${CONTENT_PATH}/${filename}?ref=${BRANCH}`);
         const data = await res.json();
-        const content = atob(data.content);
+        const content = decodeBase64(data.content);
         
         document.getElementById('post-filename').value = filename;
         document.getElementById('post-content').value = content;
         document.getElementById('editor-title').textContent = '编辑: ' + filename;
         document.getElementById('editor-section').classList.remove('hidden');
+        document.getElementById('editor-message').innerHTML = '';
       } catch (e) {
         alert('加载失败: ' + e.message);
       }
@@ -149,6 +164,7 @@ title: "新文章"
 date: ${today}
 tags: []
 categories: []
+draft: false
 ---
 
 在这里写正文...`;
@@ -157,6 +173,7 @@ categories: []
       document.getElementById('post-content').value = defaultContent;
       document.getElementById('editor-title').textContent = '新建文章';
       document.getElementById('editor-section').classList.remove('hidden');
+      document.getElementById('editor-message').innerHTML = '';
     }
     
     async function savePost() {
@@ -167,6 +184,13 @@ categories: []
         alert('请输入文件名');
         return;
       }
+      
+      if (!filename.endsWith('.md')) {
+        alert('文件名必须以 .md 结尾');
+        return;
+      }
+      
+      document.getElementById('editor-message').innerHTML = '<span style="color: #666;">保存中...</span>';
       
       try {
         // 先获取文件 sha (如果存在)
@@ -179,7 +203,7 @@ categories: []
         
         const body = {
           message: sha ? `Update ${filename}` : `Create ${filename}`,
-          content: btoa(unescape(encodeURIComponent(content))),
+          content: encodeBase64(content),
           branch: BRANCH
         };
         if (sha) body.sha = sha;
@@ -190,15 +214,18 @@ categories: []
           body: JSON.stringify(body)
         });
         
-        if (!res.ok) throw new Error('保存失败');
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || '保存失败');
+        }
         
-        document.getElementById('editor-message').innerHTML = '<span class="success">保存成功！</span>';
+        document.getElementById('editor-message').innerHTML = '<span class="success">✓ 保存成功！博客将自动重新构建...</span>';
         setTimeout(() => {
           document.getElementById('editor-section').classList.add('hidden');
           loadPosts();
-        }, 1000);
+        }, 1500);
       } catch (e) {
-        alert('保存失败: ' + e.message);
+        document.getElementById('editor-message').innerHTML = '<span class="error">保存失败: ' + e.message + '</span>';
       }
     }
     
