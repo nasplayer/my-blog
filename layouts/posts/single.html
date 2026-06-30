@@ -254,57 +254,66 @@
     {{- if .Params.password -}}
     <script>
     (function() {
-        const correctPassword = "{{ .Params.password }}";
-        const sessionKey = 'verified_' + btoa(window.location.pathname);
-        
-        if (sessionStorage.getItem(sessionKey) === 'true') return;
-        
-        const content = document.getElementById('content');
-        if (!content) return;
-        
-        const originalContent = content.innerHTML;
-        content.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px;">
-                <h2>🔒 非公开文章</h2>
-                <p>请输入密码查看内容</p>
-                <input type="password" id="pwd-input" 
-                       style="padding: 10px 15px; font-size: 16px; 
-                              border: 1px solid #ccc; border-radius: 4px;
-                              margin: 10px 0; width: 200px;" 
-                       placeholder="输入密码">
-                <br>
-                <button id="pwd-submit" 
-                        style="padding: 10px 30px; font-size: 16px;
-                               background: #3b73d9; color: white;
-                               border: none; border-radius: 4px; cursor: pointer;">
-                    确认
-                </button>
-                <p id="pwd-error" style="color: red; display: none; margin-top: 10px;">
-                    密码错误，请重试
-                </p>
-            </div>
-        `;
-        
-        const input = document.getElementById('pwd-input');
-        const btn = document.getElementById('pwd-submit');
-        const error = document.getElementById('pwd-error');
-        
-        function checkPassword() {
-            if (input.value === correctPassword) {
-                sessionStorage.setItem(sessionKey, 'true');
-                content.innerHTML = originalContent;
-            } else {
-                error.style.display = 'block';
-                input.value = '';
-                input.focus();
+        function checkPasswordProtection() {
+            const correctPassword = "{{ .Params.password }}";
+            const sessionKey = 'verified_' + btoa(window.location.pathname);
+            
+            if (sessionStorage.getItem(sessionKey) === 'true') return;
+            
+            const content = document.getElementById('content');
+            if (!content) {
+                // DOM 还没加载完，稍后重试
+                requestAnimationFrame(checkPasswordProtection);
+                return;
             }
+            
+            const originalContent = content.innerHTML;
+            content.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <h2>🔒 非公开文章</h2>
+                    <p>请输入密码查看内容</p>
+                    <input type="password" id="pwd-input" 
+                           style="padding: 10px 15px; font-size: 16px; 
+                                  border: 1px solid #ccc; border-radius: 4px;
+                                  margin: 10px 0; width: 200px;" 
+                           placeholder="输入密码">
+                    <br>
+                    <button id="pwd-submit" 
+                            style="padding: 10px 30px; font-size: 16px;
+                                   background: #3b73d9; color: white;
+                                   border: none; border-radius: 4px; cursor: pointer;">
+                        确认
+                    </button>
+                    <p id="pwd-error" style="color: red; display: none; margin-top: 10px;">
+                        密码错误，请重试
+                    </p>
+                </div>
+            `;
+            
+            const input = document.getElementById('pwd-input');
+            const btn = document.getElementById('pwd-submit');
+            const error = document.getElementById('pwd-error');
+            
+            function verifyPassword() {
+                if (input.value === correctPassword) {
+                    sessionStorage.setItem(sessionKey, 'true');
+                    content.innerHTML = originalContent;
+                } else {
+                    error.style.display = 'block';
+                    input.value = '';
+                    input.focus();
+                }
+            }
+            
+            btn.addEventListener('click', verifyPassword);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') verifyPassword();
+            });
+            input.focus();
         }
         
-        btn.addEventListener('click', checkPassword);
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') checkPassword();
-        });
-        input.focus();
+        // 立即执行
+        checkPasswordProtection();
     })();
     </script>
     {{- end -}}
