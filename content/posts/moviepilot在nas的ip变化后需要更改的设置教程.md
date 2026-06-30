@@ -2,6 +2,8 @@
 title: Moviepilot在nas的ip变化后需要更改的设置教程
 date: 2026-05-30
 draft: false
+toc:
+  ordered: false
 ---
 
 # Moviepilot在NAS的IP变化后需要更改的设置教程
