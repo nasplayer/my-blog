@@ -311,6 +311,8 @@ date: {mod_time.strftime('%Y-%m-%d')}
             front_matter += f'tags: [{tags_str}]\n'
         
         front_matter += """draft: false
+toc:
+  ordered: false
 ---
 
 """

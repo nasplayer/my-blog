@@ -2,6 +2,8 @@
 title: Moviepilot手动刮削教程
 date: 2026-05-30
 draft: false
+toc:
+  ordered: false  # 关闭自动序号
 ---
 
 # <center>Moviepilot手动刮削教程</center>
