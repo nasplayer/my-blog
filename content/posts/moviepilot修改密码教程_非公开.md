@@ -7,7 +7,7 @@ toc:
   ordered: false
 ---
 
-# Moviepilot修改密码教程
+# Moviepilot修改密码教程_非公开
 
 如何修改默认密码并关联上下载器和播放器呢？
 
