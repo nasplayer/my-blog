@@ -4,6 +4,7 @@
 博客快速发布脚本 - Windows + PyCharm 版
 支持 Typora 图片文件夹结构（.assets 文件夹）
 支持单文件和文件夹批量上传
+支持文章加密
 
 在 PyCharm 中运行:
     直接点击运行按钮，或右键 -> Run 'publish'
@@ -39,6 +40,20 @@ DEFAULT_FOLDER = r"C:\drive\pen的项目\Moviepilot教程"
 # 重试配置
 MAX_RETRIES = 5  # 最大重试次数
 RETRY_DELAY = 3  # 重试间隔（秒）
+
+# ============ 加密文章配置 ============
+# 格式: {"文章标题关键词": "密码"}
+# 标题关键词会进行模糊匹配，包含该关键词的文章都会加密
+ENCRYPTED_POSTS = {
+    # 示例：
+    # "敏感": "123456",        # 标题包含"敏感"的文章，密码为 123456
+    # "私密": "mypassword",    # 标题包含"私密"的文章，密码为 mypassword
+    # "NAS设置": "nas123",     # 标题包含"NAS设置"的文章，密码为 nas123
+}
+
+# 默认密码（如果文章需要加密但未在上面配置，则使用此密码）
+# 设为 None 表示不使用默认密码
+DEFAULT_PASSWORD = None
 # ============ 配置结束 ============
 
 # GitHub API 基础 URL
@@ -110,6 +125,17 @@ def upload_to_github(path, content, message):
     return False
 
 
+def get_password_for_title(title):
+    """根据标题获取密码"""
+    # 检查是否匹配加密文章配置
+    for keyword, password in ENCRYPTED_POSTS.items():
+        if keyword in title:
+            return password
+    
+    # 使用默认密码
+    return DEFAULT_PASSWORD
+
+
 def fix_markdown_content(content):
     """修复 Markdown 内容"""
     # 1. 修复 \# 转义
@@ -125,7 +151,7 @@ def fix_markdown_content(content):
     return content
 
 
-def add_front_matter(content, title, file_path):
+def add_front_matter(content, title, file_path, password=None):
     """添加或更新 front matter"""
     # 检查是否已有 front matter
     if content.strip().startswith('---'):
@@ -147,13 +173,36 @@ def add_front_matter(content, title, file_path):
             count=1,
             flags=re.MULTILINE
         )
+        # 更新或添加 password
+        if password:
+            # 检查是否已有 password
+            if re.search(r'^password:\s*.*$', content, re.MULTILINE):
+                content = re.sub(
+                    r'^password:\s*.*$',
+                    f'password: "{password}"',
+                    content,
+                    count=1,
+                    flags=re.MULTILINE
+                )
+            else:
+                # 在 --- 之前添加 password
+                content = re.sub(
+                    r'^---\n',
+                    f'---\npassword: "{password}"\n',
+                    content,
+                    count=1
+                )
     else:
         # 没有 front matter，添加
         mod_time = datetime.fromtimestamp(file_path.stat().st_mtime)
         front_matter = f"""---
 title: {title}
 date: {mod_time.strftime('%Y-%m-%d')}
-draft: false
+"""
+        if password:
+            front_matter += f'password: "{password}"\n'
+        
+        front_matter += """draft: false
 ---
 
 """
@@ -292,8 +341,13 @@ def publish_article(md_file_path):
     title = md_path.stem
     print(f"📌 标题: {title}")
     
+    # 检查是否需要加密
+    password = get_password_for_title(title)
+    if password:
+        print(f"🔐 加密文章，密码: {password}")
+    
     # 添加/更新 front matter
-    content = add_front_matter(content, title, md_path)
+    content = add_front_matter(content, title, md_path, password)
     
     # 生成 slug
     slug = generate_slug(title)
@@ -376,6 +430,14 @@ def main():
         print("\n❌ 请先修改脚本顶部的 GITHUB_TOKEN 配置！")
         print("   获取 Token: https://github.com/settings/tokens")
         return
+    
+    # 显示加密配置
+    if ENCRYPTED_POSTS or DEFAULT_PASSWORD:
+        print("\n🔐 加密文章配置:")
+        for keyword, pwd in ENCRYPTED_POSTS.items():
+            print(f"   标题含 \"{keyword}\" → 密码: {pwd}")
+        if DEFAULT_PASSWORD:
+            print(f"   默认密码: {DEFAULT_PASSWORD}")
     
     if len(sys.argv) < 2:
         # 无参数，使用默认文件夹
