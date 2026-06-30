@@ -18,11 +18,14 @@ import os
 import sys
 import base64
 import re
+import time
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # ============ 配置区域（请修改为你自己的） ============
 GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"  # 替换为你的 GitHub Personal Access Token
@@ -32,10 +35,29 @@ BLOG_URL = "https://nasplayer.de5.net"  # 你的博客地址
 
 # 默认上传文件夹（直接运行时使用）
 DEFAULT_FOLDER = r"C:\drive\pen的项目\Moviepilot教程"
+
+# 重试配置
+MAX_RETRIES = 5  # 最大重试次数
+RETRY_DELAY = 3  # 重试间隔（秒）
 # ============ 配置结束 ============
 
 # GitHub API 基础 URL
 API_BASE = "https://api.github.com"
+
+# 创建带重试的 session
+def create_session():
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=MAX_RETRIES,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+SESSION = create_session()
 
 
 def get_headers():
@@ -47,32 +69,45 @@ def get_headers():
 
 
 def upload_to_github(path, content, message):
-    """上传文件到 GitHub"""
+    """上传文件到 GitHub（带重试）"""
     url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{path}"
     
-    # 检查文件是否存在，获取 sha
-    params = {"ref": GITHUB_BRANCH}
-    resp = requests.get(url, headers=get_headers(), params=params)
+    for attempt in range(MAX_RETRIES):
+        try:
+            # 检查文件是否存在，获取 sha
+            params = {"ref": GITHUB_BRANCH}
+            resp = SESSION.get(url, headers=get_headers(), params=params, timeout=30)
+            
+            data = {
+                "message": message,
+                "branch": GITHUB_BRANCH,
+                "content": content,
+            }
+            
+            if resp.status_code == 200:
+                # 文件存在，更新
+                data["sha"] = resp.json()["sha"]
+            
+            resp = SESSION.put(url, headers=get_headers(), json=data, timeout=30)
+            
+            if resp.status_code in [200, 201]:
+                print(f"  ✅ 已上传: {path}")
+                return True
+            else:
+                print(f"  ❌ 上传失败: {path}")
+                print(f"     错误: {resp.text}")
+                return False
+                
+        except Exception as e:
+            if attempt < MAX_RETRIES - 1:
+                print(f"  ⚠️ 网络错误，{RETRY_DELAY}秒后重试 ({attempt + 1}/{MAX_RETRIES})...")
+                time.sleep(RETRY_DELAY)
+            else:
+                print(f"  ❌ 上传失败: {path}")
+                print(f"     错误: {e}")
+                return False
     
-    data = {
-        "message": message,
-        "branch": GITHUB_BRANCH,
-        "content": content,
-    }
-    
-    if resp.status_code == 200:
-        # 文件存在，更新
-        data["sha"] = resp.json()["sha"]
-    
-    resp = requests.put(url, headers=get_headers(), json=data)
-    
-    if resp.status_code in [200, 201]:
-        print(f"  ✅ 已上传: {path}")
-        return True
-    else:
-        print(f"  ❌ 上传失败: {path}")
-        print(f"     错误: {resp.text}")
-        return False
+    return False
 
 
 def fix_markdown_content(content):
