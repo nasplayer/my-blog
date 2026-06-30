@@ -46,17 +46,33 @@ export async function onRequestGet(context) {
       return new Response("No access token received", { status: 400 });
     }
 
-    // 构建回调 URL - 确保 hash 直接跟在路径后面，没有多余的斜杠
-    let redirectUri = stateData.redirectUri;
-    // 移除末尾的斜杠
-    if (redirectUri.endsWith('/')) {
-      redirectUri = redirectUri.slice(0, -1);
-    }
-    
-    // 直接构建完整的 URL，hash 前面不要斜杠
-    const finalUrl = `${redirectUri}#access_token=${tokenData.access_token}&token_type=bearer`;
+    // 返回 HTML 页面，用 JavaScript 设置 token 并刷新
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>授权成功</title>
+</head>
+<body>
+  <p>正在登录...</p>
+  <script>
+    (function() {
+      var token = "${tokenData.access_token}";
+      // 存储 token 到 localStorage
+      localStorage.setItem("decap-cms-user", JSON.stringify({
+        token: token,
+        backendName: "github"
+      }));
+      // 跳转回 admin
+      window.location.href = "/admin/";
+    })();
+  </script>
+</body>
+</html>`;
 
-    return Response.redirect(finalUrl, 302);
+    return new Response(html, {
+      headers: { "Content-Type": "text/html; charset=utf-8" }
+    });
   } catch (e) {
     return new Response("Error: " + e.message, { status: 500 });
   }
