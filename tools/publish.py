@@ -334,6 +334,21 @@ def find_assets_folder(md_file_path):
     return None
 
 
+def get_remote_file_info(path):
+    """获取远程文件信息（大小和SHA）"""
+    url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{path}"
+    params = {"ref": GITHUB_BRANCH}
+    resp = SESSION.get(url, headers=get_headers(), params=params, timeout=30)
+    
+    if resp.status_code == 200:
+        data = resp.json()
+        return {
+            'size': data.get('size', 0),
+            'sha': data.get('sha'),
+        }
+    return None
+
+
 def upload_images_from_assets(assets_folder, slug):
     """上传 .assets 文件夹中的所有图片
     
@@ -352,28 +367,25 @@ def upload_images_from_assets(assets_folder, slug):
     for file_path in assets_folder.iterdir():
         if file_path.is_file() and file_path.suffix.lower() in image_extensions:
             img_name = file_path.name
+            local_size = file_path.stat().st_size
             
             # 使用 slug 作为子文件夹，避免同名冲突
-            # 例如: static/images/moviepilot教程1/image-1.png
             github_path = f"static/images/{slug}/{img_name}"
             web_path = f"/images/{slug}/{img_name}"
             
-            # 读取本地图片
-            with open(file_path, 'rb') as f:
-                local_img_content = f.read()
-            
-            # 获取远程图片
-            remote_img_content = get_remote_binary_content(github_path)
-            
-            # 比较是否需要上传
-            if remote_img_content and local_img_content == remote_img_content:
-                print(f"  ⏭️ 跳过（无变化）: {img_name}")
+            # 快速检查：先比较文件大小
+            remote_info = get_remote_file_info(github_path)
+            if remote_info and remote_info['size'] == local_size:
+                # 大小相同，大概率没变，跳过
+                print(f"  ⏭️ 跳过: {img_name}")
                 uploaded[img_name] = web_path
                 continue
             
-            # 需要上传
-            img_content_b64 = base64.b64encode(local_img_content).decode()
-            if upload_to_github(github_path, img_content_b64, f"上传图片 {slug}/{img_name}"):
+            # 大小不同或远程不存在，需要上传
+            with open(file_path, 'rb') as f:
+                img_content = base64.b64encode(f.read()).decode()
+            
+            if upload_to_github(github_path, img_content, f"上传图片 {slug}/{img_name}"):
                 uploaded[img_name] = web_path
     
     return uploaded
@@ -514,11 +526,16 @@ def publish_article(md_file_path):
     # 上传文章
     github_path = f"content/posts/{slug}.md"
     
-    # 检查是否需要更新
-    remote_content = get_remote_content(github_path)
-    if not content_needs_update(content, remote_content):
-        print("⏭️ 文章无变化，跳过上传")
-        return True
+    # 快速检查：比较文件大小
+    remote_info = get_remote_file_info(github_path)
+    local_size = len(content.encode('utf-8'))
+    
+    if remote_info and remote_info['size'] == local_size:
+        # 大小相同，再比较内容（防止碰巧大小相同）
+        remote_content = get_remote_content(github_path)
+        if not content_needs_update(content, remote_content):
+            print("⏭️ 文章无变化，跳过上传")
+            return True
     
     print("📤 上传文章...")
     content_base64 = base64.b64encode(content.encode('utf-8')).decode()
