@@ -37,16 +37,15 @@ keywords = ["教程", "软件", "技术"]
     enable = true
     [page.comment.giscus]
       enable = true
-      # 需要在创建 GitHub Discussions 后填写
-      repo = ""
-      repoId = ""
-      category = ""
-      categoryId = ""
+      repo = "nasplayer/my-blog"
+      repoId = "R_kgDOTIJW1w"
+      category = "Announcements"
+      categoryId = "DIC_kwDOTIJW184DAMGP"
       mapping = "pathname"
       reactionsEnabled = "1"
       emitMetadata = "0"
-      inputPosition = "top"
-      theme = "light_tritanopia"
+      inputPosition = "bottom"
+      theme = "preferred_color_scheme"
       lang = "zh-CN"
       loading = "lazy"
 
