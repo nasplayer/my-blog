@@ -77,7 +77,7 @@ bundle = false
   custom = ''
   # whether to show Hugo and theme info
   # 是否显示 Hugo 和主题信息
-  hugo = true
+  hugo = false
   # Hosted on (HTML format is supported)
   # 托管服务信息 (支持 HTML 格式)
   # <a title="Github Pages" href="https://docs.github.com/en/pages/" target="_blank" rel="noopener noreferrer">GitHub Pages</a>
@@ -96,7 +96,7 @@ bundle = false
   icp = ""
   # license info (HTML format is supported)
   # 许可协议信息 (支持 HTML 格式)
-  license= '<a rel="license external nofollow noopener noreferrer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a>'
+  license= ''
 
 # Section (all posts) page config
 # Section (所有文章) 页面配置
@@ -445,9 +445,9 @@ bundle = false
     # Utterances comment config (https://utteranc.es/)
     # Utterances comment 评论系统设置 (https://utteranc.es/)
     [page.comment.utterances]
-      enable = true
+      enable = false
       # owner/repo
-      repo = "Hugo-DoIt/utterances-comments"
+      repo = ""
       issueTerm = "pathname"
       label = ""
       lightTheme = "github-light"
@@ -483,12 +483,12 @@ bundle = false
     # giscus comment config (https://giscus.app/)
     # giscus comment 评论系统设置 (https://giscus.app/)
     [page.comment.giscus]
-      enable = false
+      enable = true
       # owner/repo
-      dataRepo = ""
-      dataRepoId = ""
-      dataCategory = ""
-      dataCategoryId = ""
+      dataRepo = "nasplayer/my-blog"
+      dataRepoId = "R_kgDOTIJW1w"
+      dataCategory = "Announcements"
+      dataCategoryId = "DIC_kwDOTIJW184DAMGP"
       dataMapping = "pathname"
       dataStrict = "0"
       dataReactionsEnabled = "1"
@@ -496,7 +496,7 @@ bundle = false
       dataInputPosition = "bottom"
       lightTheme = "light"
       darkTheme = "dark"
-      dataLang = "en"
+      dataLang = "zh-CN"
       dataLoading = "lazy"
     # artalk comment config (https://artalk.js.org/guide/frontend/config.html)
     # artalk comment 评论系统设置 (https://artalk.js.org/guide/frontend/config.html)
