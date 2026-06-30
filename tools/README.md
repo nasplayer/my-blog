@@ -18,6 +18,7 @@
 | 脚本 | 功能 |
 |------|------|
 | `publish.py` | 发布文章 |
+| `delete_article.py` | 删除文章 |
 | `clean_images.py` | 删除所有图片 |
 | `clean_unused_images.py` | 删除未使用的图片 |
 
@@ -54,7 +55,34 @@ ENCRYPTED_POSTS = {
 DEFAULT_PASSWORD = None  # 其他文章不加密
 ```
 
-### 3. 获取 GitHub Token
+### 3. 置顶配置
+
+```python
+PINNED_KEYWORDS = [
+    "重要",    # 标题包含"重要"的文章会置顶
+    "置顶",    # 标题包含"置顶"的文章会置顶
+]
+```
+
+### 4. 分类配置
+
+```python
+CATEGORY_RULES = {
+    "MoviePilot": "MoviePilot教程",  # 标题含MoviePilot归类到MoviePilot教程
+    "NAS": "NAS教程",               # 标题含NAS归类到NAS教程
+}
+```
+
+### 5. 标签配置
+
+```python
+TAG_RULES = {
+    "MoviePilot": ["MoviePilot", "教程"],
+    "认证": ["认证", "安全"],
+}
+```
+
+### 6. 获取 GitHub Token
 
 1. 打开 https://github.com/settings/tokens
 2. 点击 **Generate new token (classic)**
@@ -136,6 +164,18 @@ DEFAULT_PASSWORD = "统一密码"
 修改 MD 文件后重新运行脚本，会自动覆盖旧文章。
 
 **注意**：如果文章标题改变，会创建新文章而不是更新旧文章。
+
+---
+
+## 🗑️ 删除文章
+
+```bash
+python delete_article.py
+```
+
+运行后会列出所有文章，输入编号或文件名删除。
+
+删除文章时会同时删除相关图片。
 
 ---
 
