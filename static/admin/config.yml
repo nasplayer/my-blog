@@ -2,7 +2,7 @@ backend:
   name: github
   repo: nasplayer/my-blog
   branch: main
-  base_url: https://api.netlify.com
+  base_url: https://nasplayer.de5.net/api
   auth_endpoint: auth
 
 media_folder: "static/images"
