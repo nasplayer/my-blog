@@ -48,21 +48,75 @@ except ImportError:
 
 # 缓存文件路径
 CACHE_FILE = Path(__file__).parent / ".publish_cache.json"
+CACHE_GITHUB_PATH = "tools/.publish_cache.json"
+
+
+def download_cache():
+    """从 GitHub 下载缓存"""
+    url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{CACHE_GITHUB_PATH}"
+    params = {"ref": GITHUB_BRANCH}
+    resp = SESSION.get(url, headers=get_headers(), params=params, timeout=30)
+    
+    if resp.status_code == 200:
+        try:
+            content = base64.b64decode(resp.json()['content']).decode('utf-8')
+            cache = json.loads(content)
+            # 同时保存到本地
+            with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f"📥 已从 GitHub 下载缓存 ({len(cache)} 条记录)")
+            return cache
+        except:
+            pass
+    return {}
+
+
+def upload_cache(cache):
+    """上传缓存到 GitHub"""
+    content = json.dumps(cache, indent=2, ensure_ascii=False)
+    content_b64 = base64.b64encode(content.encode('utf-8')).decode()
+    
+    # 获取现有文件的 SHA
+    url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{CACHE_GITHUB_PATH}"
+    params = {"ref": GITHUB_BRANCH}
+    resp = SESSION.get(url, headers=get_headers(), params=params, timeout=30)
+    
+    data = {
+        "message": "更新发布缓存",
+        "branch": GITHUB_BRANCH,
+        "content": content_b64,
+    }
+    
+    if resp.status_code == 200:
+        data["sha"] = resp.json()["sha"]
+    
+    resp = SESSION.put(url, headers=get_headers(), json=data, timeout=30)
+    
+    if resp.status_code in [200, 201]:
+        print(f"📤 已上传缓存到 GitHub ({len(cache)} 条记录)")
+        return True
+    return False
 
 
 def load_cache():
-    """加载本地缓存"""
+    """加载缓存（优先从 GitHub 下载）"""
+    # 先尝试从 GitHub 下载
+    cache = download_cache()
+    if cache:
+        return cache
+    
+    # GitHub 没有，尝试本地
     if CACHE_FILE.exists():
         try:
             with open(CACHE_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except:
-            return {}
+            pass
     return {}
 
 
 def save_cache(cache):
-    """保存本地缓存"""
+    """保存缓存到本地"""
     with open(CACHE_FILE, 'w', encoding='utf-8') as f:
         json.dump(cache, f, indent=2, ensure_ascii=False)
 
@@ -632,7 +686,7 @@ def publish_folder(folder_path):
         print(f"❌ 未找到 MD 文件: {folder_path}")
         return
     
-    # 加载缓存
+    # 加载缓存（从 GitHub 下载）
     cache = load_cache()
     
     print("=" * 50)
@@ -645,6 +699,9 @@ def publish_folder(folder_path):
     for md_file in md_files:
         if publish_article(md_file, cache):
             success_count += 1
+    
+    # 上传缓存到 GitHub
+    upload_cache(cache)
     
     print("\n" + "=" * 50)
     print(f"🎉 发布完成: {success_count}/{len(md_files)} 篇文章")
@@ -680,12 +737,14 @@ def main():
         arg = sys.argv[1]
         path = Path(arg)
         
-        # 加载缓存
+        # 加载缓存（从 GitHub 下载）
         cache = load_cache()
         
         if path.is_file():
             # 单个文件
-            publish_article(arg, cache)
+            result = publish_article(arg, cache)
+            # 上传缓存到 GitHub
+            upload_cache(cache)
         elif path.is_dir():
             # 文件夹
             publish_folder(arg)

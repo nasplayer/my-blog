@@ -7,10 +7,12 @@
 
 import sys
 import re
+import json
 import base64
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from pathlib import Path
 
 # ============ 导入统一配置 ============
 try:
@@ -24,6 +26,11 @@ except ImportError:
 
 API_BASE = "https://api.github.com"
 
+# 缓存文件路径
+CACHE_FILE = Path(__file__).parent / ".publish_cache.json"
+CACHE_GITHUB_PATH = "tools/.publish_cache.json"
+
+
 def create_session():
     session = requests.Session()
     retry_strategy = Retry(total=5, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
@@ -33,11 +40,57 @@ def create_session():
 
 SESSION = create_session()
 
+
 def get_headers():
     return {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json",
     }
+
+
+def download_cache():
+    """从 GitHub 下载缓存"""
+    url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{CACHE_GITHUB_PATH}"
+    params = {"ref": GITHUB_BRANCH}
+    resp = SESSION.get(url, headers=get_headers(), params=params, timeout=30)
+    
+    if resp.status_code == 200:
+        try:
+            content = base64.b64decode(resp.json()['content']).decode('utf-8')
+            cache = json.loads(content)
+            with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f"📥 已从 GitHub 下载缓存 ({len(cache)} 条记录)")
+            return cache
+        except:
+            pass
+    return {}
+
+
+def upload_cache(cache):
+    """上传缓存到 GitHub"""
+    content = json.dumps(cache, indent=2, ensure_ascii=False)
+    content_b64 = base64.b64encode(content.encode('utf-8')).decode()
+    
+    url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{CACHE_GITHUB_PATH}"
+    params = {"ref": GITHUB_BRANCH}
+    resp = SESSION.get(url, headers=get_headers(), params=params, timeout=30)
+    
+    data = {
+        "message": "更新发布缓存",
+        "branch": GITHUB_BRANCH,
+        "content": content_b64,
+    }
+    
+    if resp.status_code == 200:
+        data["sha"] = resp.json()["sha"]
+    
+    resp = SESSION.put(url, headers=get_headers(), json=data, timeout=30)
+    
+    if resp.status_code in [200, 201]:
+        print(f"📤 已上传缓存到 GitHub ({len(cache)} 条记录)")
+        return True
+    return False
 
 def get_dir_contents(path):
     """获取目录内容"""
@@ -95,7 +148,7 @@ def list_articles():
     
     return md_files
 
-def delete_article(slug):
+def delete_article(slug, cache):
     """删除文章和相关图片"""
     # 查找文章
     articles = get_dir_contents('content/posts')
@@ -151,11 +204,19 @@ def delete_article(slug):
                 if delete_file(img['path'], img['sha'], f"删除图片 {img_name}"):
                     print(f"  ✅ 已删除图片: {img_name}")
                     deleted_images += 1
+                    # 从缓存中删除
+                    cache_key = f"img:{img['path']}"
+                    if cache_key in cache:
+                        del cache[cache_key]
                 break
     
     # 删除文章
     if delete_file(target['path'], target['sha'], f"删除文章: {title}"):
         print(f"  ✅ 已删除文章: {title}")
+        # 从缓存中删除
+        cache_key = f"article:{target['path']}"
+        if cache_key in cache:
+            del cache[cache_key]
         print(f"\n🎉 删除完成: 文章 1 篇, 图片 {deleted_images} 张")
         return True
     
@@ -165,6 +226,9 @@ def main():
     if GITHUB_TOKEN == "YOUR_GITHUB_TOKEN":
         print("❌ 请先修改 GITHUB_TOKEN")
         return
+    
+    # 加载缓存（从 GitHub 下载）
+    cache = download_cache()
     
     articles = list_articles()
     
@@ -187,12 +251,16 @@ def main():
             index = int(user_input)
             if 1 <= index <= len(articles):
                 slug = articles[index - 1]['name'].replace('.md', '')
-                delete_article(slug)
+                if delete_article(slug, cache):
+                    # 上传缓存到 GitHub
+                    upload_cache(cache)
             else:
                 print("❌ 编号无效")
         except ValueError:
             # 按文件名删除
-            delete_article(user_input)
+            if delete_article(user_input, cache):
+                # 上传缓存到 GitHub
+                upload_cache(cache)
 
 if __name__ == "__main__":
     main()
