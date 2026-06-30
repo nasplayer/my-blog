@@ -1,0 +1,142 @@
+/* 首页卡片布局 */
+.page.home[data-posts] {
+  max-width: 100% !important;
+  padding: 0 20px;
+}
+
+/* 卡片网格容器 */
+.page.home[data-posts] > .summary {
+  margin-bottom: 0 !important;
+}
+
+/* 在文章列表外层添加网格 */
+.page.home[data-posts] {
+  display: block;
+}
+
+/* 使用 CSS Grid 实现响应式卡片布局 */
+.page.home[data-posts] > .summary {
+  display: inline-block;
+  width: calc(33.333% - 20px);
+  margin: 10px !important;
+  vertical-align: top;
+}
+
+/* 平板：2列 */
+@media (max-width: 1200px) {
+  .page.home[data-posts] > .summary {
+    width: calc(50% - 20px);
+  }
+}
+
+/* 手机：1列 */
+@media (max-width: 768px) {
+  .page.home[data-posts] > .summary {
+    width: calc(100% - 20px);
+    margin: 10px !important;
+  }
+}
+
+/* 卡片样式 */
+.page.home[data-posts] > .summary {
+  background: var(--card-background, #fff);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.page.home[data-posts] > .summary:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* 深色模式 */
+[data-theme="dark"] .page.home[data-posts] > .summary {
+  --card-background: #1a1a2e;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .page.home[data-posts] > .summary:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* 卡片内图片 */
+.page.home[data-posts] > .summary .featured-image-preview {
+  margin: 0;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+}
+
+.page.home[data-posts] > .summary .featured-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.page.home[data-posts] > .summary:hover .featured-image-preview img {
+  transform: scale(1.05);
+}
+
+/* 卡片标题 */
+.page.home[data-posts] > .summary .single-title {
+  font-size: 1.1em;
+  margin: 15px 15px 10px;
+  line-height: 1.4;
+}
+
+.page.home[data-posts] > .summary .single-title a {
+  color: var(--card-title-color, #333);
+}
+
+[data-theme="dark"] .page.home[data-posts] > .summary .single-title a {
+  --card-title-color: #e0e0e0;
+}
+
+/* 卡片元信息 */
+.page.home[data-posts] > .summary .post-meta {
+  font-size: 0.85em;
+  margin: 0 15px 10px;
+  color: var(--card-meta-color, #666);
+}
+
+[data-theme="dark"] .page.home[data-posts] > .summary .post-meta {
+  --card-meta-color: #999;
+}
+
+/* 卡片摘要 */
+.page.home[data-posts] > .summary .content {
+  margin: 0 15px 10px;
+  font-size: 0.9em;
+  color: var(--card-content-color, #555);
+  line-height: 1.6;
+  max-height: 4.8em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+[data-theme="dark"] .page.home[data-posts] > .summary .content {
+  --card-content-color: #aaa;
+}
+
+/* 卡片底部 */
+.page.home[data-posts] > .summary .post-footer {
+  margin: 0 15px 15px;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-border, #eee);
+  font-size: 0.85em;
+}
+
+[data-theme="dark"] .page.home[data-posts] > .summary .post-footer {
+  --card-border: #333;
+}
+
+/* 分页保持居中 */
+.page.home[data-posts] > .paginator {
+  clear: both;
+  text-align: center;
+  margin-top: 30px;
+}
