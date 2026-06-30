@@ -177,8 +177,16 @@ def find_assets_folder(md_file_path):
     return None
 
 
-def upload_images_from_assets(assets_folder):
-    """上传 .assets 文件夹中的所有图片"""
+def upload_images_from_assets(assets_folder, slug):
+    """上传 .assets 文件夹中的所有图片
+    
+    Args:
+        assets_folder: .assets 文件夹路径
+        slug: 文章的 slug，用作图片路径前缀，避免同名冲突
+    
+    Returns:
+        dict: {原文件名: GitHub路径}
+    """
     uploaded = {}  # {原文件名: GitHub路径}
     
     # 支持的图片格式
@@ -187,13 +195,17 @@ def upload_images_from_assets(assets_folder):
     for file_path in assets_folder.iterdir():
         if file_path.is_file() and file_path.suffix.lower() in image_extensions:
             img_name = file_path.name
-            github_path = f"static/images/{img_name}"
+            
+            # 使用 slug 作为子文件夹，避免同名冲突
+            # 例如: static/images/moviepilot教程1/image-1.png
+            github_path = f"static/images/{slug}/{img_name}"
+            web_path = f"/images/{slug}/{img_name}"
             
             with open(file_path, 'rb') as f:
                 img_content = base64.b64encode(f.read()).decode()
             
-            if upload_to_github(github_path, img_content, f"上传图片 {img_name}"):
-                uploaded[img_name] = f"/images/{img_name}"
+            if upload_to_github(github_path, img_content, f"上传图片 {slug}/{img_name}"):
+                uploaded[img_name] = web_path
     
     return uploaded
 
@@ -297,7 +309,8 @@ def publish_article(md_file_path):
     if assets_folder:
         print(f"📂 找到图片文件夹: {assets_folder.name}")
         print("📤 上传图片...")
-        uploaded_images = upload_images_from_assets(assets_folder)
+        # 传入 slug，图片会存到 static/images/{slug}/ 目录
+        uploaded_images = upload_images_from_assets(assets_folder, slug)
         
         if uploaded_images:
             print(f"   已上传 {len(uploaded_images)} 张图片")
