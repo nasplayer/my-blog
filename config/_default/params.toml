@@ -29,11 +29,11 @@ license = '<a rel="license external nofollow noopener noreferrer" href="https://
 bundle = false
 
 [author]
-  name = "PCloud"
-  email = "heige.pcloud@outlook.com"
-  link = "https://github.com/HEIGE-PCloud"
+  name = "玩转NAS影音"
+  email = ""
+  link = "https://nasplayer.de5.net"
   avatar = "/images/avatar.webp"
-  gravatarEmail = "heige.pcloud@outlook.com"
+  gravatarEmail = ""
 
 [image]
   # cache remote images for better optimisations
