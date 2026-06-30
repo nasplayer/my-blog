@@ -1,6 +1,9 @@
 /* 首页卡片布局 */
+
+/* 移除首页宽度限制，允许更宽的布局 */
 .page.home[data-posts] {
-  max-width: 100% !important;
+  max-width: 1400px !important;
+  width: 90% !important;
   padding: 0 20px;
 }
 
@@ -17,23 +20,42 @@
 /* 使用 CSS Grid 实现响应式卡片布局 */
 .page.home[data-posts] > .summary {
   display: inline-block;
-  width: calc(33.333% - 20px);
-  margin: 10px !important;
+  width: calc(33.333% - 24px);
+  margin: 12px !important;
   vertical-align: top;
 }
 
-/* 平板：2列 */
-@media (max-width: 1200px) {
+/* 大屏幕：3列 */
+@media (min-width: 1200px) {
+  .page.home[data-posts] {
+    max-width: 1400px !important;
+    width: 90% !important;
+  }
   .page.home[data-posts] > .summary {
-    width: calc(50% - 20px);
+    width: calc(33.333% - 24px);
+  }
+}
+
+/* 中等屏幕：2列 */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .page.home[data-posts] {
+    max-width: 900px !important;
+    width: 90% !important;
+  }
+  .page.home[data-posts] > .summary {
+    width: calc(50% - 24px);
   }
 }
 
 /* 手机：1列 */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
+  .page.home[data-posts] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
   .page.home[data-posts] > .summary {
-    width: calc(100% - 20px);
-    margin: 10px !important;
+    width: calc(100% - 24px);
+    margin: 12px !important;
   }
 }
 
