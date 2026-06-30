@@ -1,0 +1,64 @@
+# 网站描述
+description = "软件使用教程博客"
+# 网站关键词
+keywords = ["教程", "软件", "技术"]
+
+# 应用图标配置
+[app]
+  title = "NasPlayer"
+  noFavicon = false
+  svgFavicon = ""
+  iconColor = "#5bbad5"
+  tileColor = "#da532c"
+
+# 搜索配置
+[search]
+  enable = true
+  type = "fuse"
+  [search.fuse]
+    isCaseSensitive = false
+    minMatchCharLength = 2
+    findAllMatches = false
+    location = 0
+    threshold = 0.3
+    distance = 100
+    ignoreLocation = false
+    ignoreFieldNorm = false
+
+# 主页配置
+[home]
+  [home.posts]
+    enable = true
+    paginate = 6
+
+# 页面配置
+[page]
+  [page.comment]
+    enable = true
+    [page.comment.giscus]
+      enable = true
+      # 需要在创建 GitHub Discussions 后填写
+      repo = ""
+      repoId = ""
+      category = ""
+      categoryId = ""
+      mapping = "pathname"
+      reactionsEnabled = "1"
+      emitMetadata = "0"
+      inputPosition = "top"
+      theme = "light_tritanopia"
+      lang = "zh-CN"
+      loading = "lazy"
+
+  [page.toc]
+    enable = true
+    keepStatic = false
+    auto = true
+
+  [page.code]
+    copy = true
+
+# 页脚配置
+[footer]
+  since = 2025
+  author = "NasPlayer"

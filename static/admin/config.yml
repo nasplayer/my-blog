@@ -2,22 +2,44 @@ backend:
   name: github
   repo: nasplayer/my-blog
   branch: main
-  base_url: https://cms-oauth.nasplayer.workers.dev
-  auth_endpoint: auth
+  # 使用 Cloudflare Access 进行认证
+  # 部署到 CF Pages 后需要配置 OAuth
 
+# 媒体库配置 - 使用本地文件夹（会存储到 GitHub 仓库）
+# 如需使用 R2，需要额外配置
 media_folder: "static/images"
 public_folder: "/images"
 
+# 内容集合
 collections:
+  # 文章
   - name: "posts"
     label: "文章"
     folder: "content/posts"
     create: true
     slug: "{{slug}}"
     fields:
-      - {label: "标题", name: "title", widget: "string"}
-      - {label: "发布日期", name: "date", widget: "datetime"}
+      - {label: "标题", name: "title", widget: "string", required: true}
+      - {label: "发布日期", name: "date", widget: "datetime", required: true}
       - {label: "草稿", name: "draft", widget: "boolean", default: false}
-      - {label: "标签", name: "tags", widget: "list", default: []}
-      - {label: "分类", name: "categories", widget: "list", default: []}
-      - {label: "正文", name: "body", widget: "markdown"}
+      - label: "分类"
+        name: "categories"
+        widget: "list"
+        required: false
+      - label: "标签"
+        name: "tags"
+        widget: "list"
+        required: false
+      - {label: "正文", name: "body", widget: "markdown", required: true}
+  
+  # 页面
+  - name: "pages"
+    label: "页面"
+    folder: "content"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "标题", name: "title", widget: "string", required: true}
+      - {label: "发布日期", name: "date", widget: "datetime", required: true}
+      - {label: "草稿", name: "draft", widget: "boolean", default: false}
+      - {label: "正文", name: "body", widget: "markdown", required: true}

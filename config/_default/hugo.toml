@@ -1,0 +1,12 @@
+baseURL = "https://nasplayer.de5.net"
+defaultContentLanguage = "zh-cn"
+title = "NasPlayer 博客"
+
+enableRobotsTXT = true
+enableGitInfo = true
+enableEmoji = true
+
+theme = "DoIt"
+
+[params]
+  env = "production"

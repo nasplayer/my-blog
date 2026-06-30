@@ -1,0 +1,25 @@
+# 菜单配置
+
+[[main]]
+  identifier = "posts"
+  name = "文章"
+  url = "/posts/"
+  weight = 1
+
+[[main]]
+  identifier = "categories"
+  name = "分类"
+  url = "/categories/"
+  weight = 2
+
+[[main]]
+  identifier = "tags"
+  name = "标签"
+  url = "/tags/"
+  weight = 3
+
+[[main]]
+  identifier = "about"
+  name = "关于"
+  url = "/about/"
+  weight = 4
