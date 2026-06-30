@@ -1,6 +1,6 @@
 ---
 title: Moviepilot用户认证教程
-date: 2026-06-30T15:01:00.000Z
+date: 2026-06-30
 draft: false
 ---
 \# Moviepilot用户认证教程
