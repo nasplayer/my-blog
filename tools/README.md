@@ -6,19 +6,24 @@
 - ✅ 支持 Typora 图片文件夹结构（.assets 文件夹）
 - ✅ 支持单文件和文件夹批量上传
 - ✅ 自动添加 front matter（title、date）
+- ✅ 支持文章加密（按标题关键词自动加密）
 - ✅ 直接在 PyCharm 中运行
 
 ---
 
-## 下载
+## 📥 下载
 
 **下载地址**: https://github.com/nasplayer/my-blog/tree/main/tools
 
-下载 `publish.py` 文件即可。
+| 脚本 | 功能 |
+|------|------|
+| `publish.py` | 发布文章 |
+| `clean_images.py` | 删除所有图片 |
+| `clean_unused_images.py` | 删除未使用的图片 |
 
 ---
 
-## 安装依赖
+## 📦 安装依赖
 
 ```bash
 pip install requests
@@ -26,21 +31,30 @@ pip install requests
 
 ---
 
-## 配置
+## ⚙️ 配置
 
-打开 `publish.py`，修改第 25-31 行：
+打开 `publish.py`，修改配置区域：
+
+### 1. 基本配置
 
 ```python
-GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"  # 替换为你的 GitHub Token
-GITHUB_REPO = "nasplayer/my-blog"    # 你的 GitHub 仓库
-GITHUB_BRANCH = "main"               # 分支名
-BLOG_URL = "https://nasplayer.de5.net"  # 你的博客地址
-
-# 默认上传文件夹（直接运行时使用）
+GITHUB_TOKEN = "你的GitHub Token"
+GITHUB_REPO = "nasplayer/my-blog"
+GITHUB_BRANCH = "main"
+BLOG_URL = "https://nasplayer.de5.net"
 DEFAULT_FOLDER = r"C:\drive\pen的项目\Moviepilot教程"
 ```
 
-### 如何获取 GitHub Token
+### 2. 加密配置
+
+```python
+ENCRYPTED_POSTS = {
+    "私密": "你的密码",  # 标题包含"私密"的文章会加密
+}
+DEFAULT_PASSWORD = None  # 其他文章不加密
+```
+
+### 3. 获取 GitHub Token
 
 1. 打开 https://github.com/settings/tokens
 2. 点击 **Generate new token (classic)**
@@ -49,13 +63,13 @@ DEFAULT_FOLDER = r"C:\drive\pen的项目\Moviepilot教程"
 
 ---
 
-## 使用方法
+## 🚀 使用方法
 
 ### 方式一：PyCharm 直接运行
 
 1. 用 PyCharm 打开 `publish.py`
-2. 修改配置（见上方）
-3. 点击运行按钮 ▶️ 或右键 -> Run 'publish'
+2. 修改配置
+3. 点击运行按钮 ▶️
 4. 自动上传 `DEFAULT_FOLDER` 里的所有 MD 文件
 
 ### 方式二：命令行运行
@@ -65,84 +79,122 @@ DEFAULT_FOLDER = r"C:\drive\pen的项目\Moviepilot教程"
 python publish.py
 
 # 上传单个文件
-python publish.py "C:\drive\pen的项目\Moviepilot教程\Moviepilot手动刮削教程.md"
+python publish.py "C:\教程\Moviepilot教程.md"
 
 # 上传指定文件夹所有 MD 文件
-python publish.py "C:\drive\pen的项目\Moviepilot教程"
+python publish.py "C:\教程"
 ```
 
 ---
 
-## 文件夹结构
+## 📁 文件夹结构
 
 支持 Typora 的 `.assets` 图片文件夹：
 
 ```
-C:\drive\pen的项目\Moviepilot教程\
-    ├── Moviepilot手动刮削教程.md
-    ├── Moviepilot手动刮削教程.assets\
-    │       ├── image-1.png
-    │       └── image-2.png
-    ├── Moviepilot用户认证教程.md
-    └── Moviepilot用户认证教程.assets\
-            └── screenshot.png
+C:\教程\
+    ├── Moviepilot教程.md
+    └── Moviepilot教程.assets\
+            ├── image-1.png
+            └── image-2.png
 ```
 
 ---
 
-## 自动添加 Front Matter
+## 🔐 文章加密
 
-脚本会自动添加/更新 front matter：
+### 加密规则
 
-```markdown
----
-title: Moviepilot手动刮削教程
-date: 2026-06-30
-draft: false
----
+| 文章标题 | 是否加密 |
+|----------|----------|
+| 包含"私密" | ✅ 加密 |
+| 其他文章 | ❌ 不加密 |
 
-# 原文章内容...
+### 自定义加密规则
+
+修改 `ENCRYPTED_POSTS` 配置：
+
+```python
+ENCRYPTED_POSTS = {
+    "私密": "密码1",
+    "敏感": "密码2",
+    "机密": "密码3",
+}
 ```
 
-- **title**: 文件名（不含扩展名）
-- **date**: 文件修改时间
+### 所有文章加密
+
+```python
+ENCRYPTED_POSTS = {}
+DEFAULT_PASSWORD = "统一密码"
+```
 
 ---
 
-## 运行示例
+## 🔄 更新文章
+
+修改 MD 文件后重新运行脚本，会自动覆盖旧文章。
+
+**注意**：如果文章标题改变，会创建新文章而不是更新旧文章。
+
+---
+
+## 🗑️ 清理图片
+
+### 删除所有图片
+
+```bash
+python clean_images.py
+```
+
+### 删除未使用的图片
+
+```bash
+python clean_unused_images.py
+```
+
+自动检测哪些图片没有被任何文章引用，并删除。
+
+---
+
+## 📋 运行示例
 
 ```
 ==================================================
 📝 博客快速发布工具
 ==================================================
-📂 使用默认文件夹: C:\drive\pen的项目\Moviepilot教程
 
+🔐 加密文章配置:
+   标题含 "私密" → 密码: *** (已设置)
+
+📂 使用默认文件夹: C:\drive\pen的项目\Moviepilot教程
 ==================================================
 📚 批量发布: C:\drive\pen的项目\Moviepilot教程
    找到 3 个 MD 文件
 ==================================================
 
-📝 处理文章: Moviepilot手动刮削教程.md
+📝 处理文章: Moviepilot教程.md
 --------------------------------------------------
-📌 标题: Moviepilot手动刮削教程
-🔗 Slug: moviepilot
-📂 找到图片文件夹: Moviepilot手动刮削教程.assets
+📌 标题: Moviepilot教程
+🔗 Slug: moviepilot教程
+📂 找到图片文件夹: Moviepilot教程.assets
 📤 上传图片...
-  ✅ 已上传: static/images/image-1.png
-  ✅ 已上传: static/images/image-2.png
+  ✅ 已上传: static/images/moviepilot教程/image-1.png
+  ✅ 已上传: static/images/moviepilot教程/image-2.png
    已上传 2 张图片
 📤 上传文章...
-  ✅ 已上传: content/posts/moviepilot.md
-✅ 发布成功: https://nasplayer.de5.net/moviepilot/
+  ✅ 已上传: content/posts/moviepilot教程.md
+✅ 发布成功: https://nasplayer.de5.net/moviepilot教程/
 
-📝 处理文章: Moviepilot用户认证教程.md
+📝 处理文章: 私密设置教程.md
 --------------------------------------------------
-📌 标题: Moviepilot用户认证教程
-🔗 Slug: moviepilot
+📌 标题: 私密设置教程
+🔐 加密文章，密码: ***
+🔗 Slug: 私密设置教程
 📂 未找到 .assets 文件夹
 📤 上传文章...
-  ✅ 已上传: content/posts/moviepilot.md
-✅ 发布成功: https://nasplayer.de5.net/moviepilot/
+  ✅ 已上传: content/posts/私密设置教程.md
+✅ 发布成功: https://nasplayer.de5.net/私密设置教程/
 
 ==================================================
 🎉 发布完成: 3/3 篇文章
@@ -153,9 +205,10 @@ draft: false
 
 ---
 
-## 注意事项
+## ⚠️ 注意事项
 
 1. MD 文件使用 UTF-8 编码
 2. 发布后等待 1-2 分钟让 Cloudflare Pages 部署
 3. 图片文件名建议用英文和数字
 4. `.assets` 文件夹要和 MD 文件在同一目录
+5. 加密是前端加密，不适合高度敏感内容
