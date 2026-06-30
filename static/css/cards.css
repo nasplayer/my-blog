@@ -1,53 +1,40 @@
-/* 首页卡片布局 - 使用 CSS Grid */
+/* 首页卡片布局 */
 
-/* 首页容器宽度 */
+/* 首页容器 */
 .page.home[data-posts] {
   max-width: 1400px !important;
   width: 95% !important;
   padding: 20px !important;
   box-sizing: border-box !important;
+  text-align: center !important;
 }
 
-/* 使用 Flexbox 实现卡片布局 */
-.page.home[data-posts] {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  justify-content: center !important;
-  align-items: flex-start !important;
-  gap: 20px !important;
-}
-
-/* 卡片样式 */
+/* 卡片作为 inline-block 排列 */
 .page.home[data-posts] > .summary {
-  flex: 0 0 calc(33.333% - 14px) !important;
-  width: calc(33.333% - 14px) !important;
-  max-width: calc(33.333% - 14px) !important;
-  margin: 0 !important;
+  display: inline-block !important;
+  width: 32% !important;
+  margin: 0.5% !important;
+  vertical-align: top !important;
+  text-align: left !important;
 }
 
 /* 中等屏幕：2列 */
 @media (max-width: 1199px) {
   .page.home[data-posts] > .summary {
-    flex: 0 0 calc(50% - 10px) !important;
-    width: calc(50% - 10px) !important;
-    max-width: calc(50% - 10px) !important;
+    width: 48% !important;
+    margin: 0.5% !important;
   }
 }
 
 /* 手机：1列 */
 @media (max-width: 767px) {
-  .page.home[data-posts] {
-    width: 100% !important;
-    gap: 15px !important;
-  }
   .page.home[data-posts] > .summary {
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    width: 98% !important;
+    margin: 1% !important;
   }
 }
 
-/* 卡片外观样式 */
+/* 卡片外观 */
 .page.home[data-posts] > .summary {
   background: var(--card-bg, #ffffff);
   border-radius: 12px;
@@ -71,7 +58,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-/* 卡片内图片 */
+/* 卡片图片 */
 .page.home[data-posts] > .summary .featured-image-preview {
   margin: 0 !important;
   aspect-ratio: 16/9;
@@ -136,9 +123,9 @@
   --card-border: #333;
 }
 
-/* 分页保持居中 */
+/* 分页 */
 .page.home[data-posts] > .paginator {
-  flex: 0 0 100% !important;
+  display: block !important;
   width: 100% !important;
   text-align: center;
   margin-top: 20px !important;
