@@ -2,6 +2,8 @@
 title: Moviepilot添加新pt站教程
 date: 2026-05-30
 draft: false
+toc:
+  ordered: false
 ---
 
 # Moviepilot添加新pt站教程
