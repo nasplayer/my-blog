@@ -140,6 +140,10 @@ bundle = false
   # whether to hide a page from search results
   # 是否在搜索结果中隐藏一篇文章
   hiddenFromSearch = false
+  
+  # 加密文章配置
+  # 加密功能需要文章设置 password 参数
+  # 例如：password = "your-password"
   # whether to enable twemoji
   # 是否使用 twemoji
   twemoji = false
