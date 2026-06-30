@@ -3,19 +3,15 @@
 """
 博客快速发布脚本 - Windows + PyCharm 版
 支持 Typora 图片文件夹结构（.assets 文件夹）
+支持单文件和文件夹批量上传
 
-使用方法:
-    python publish.py "D:\\教程\\Moviepilot手动刮削教程.md"
+在 PyCharm 中运行:
+    直接点击运行按钮，或右键 -> Run 'publish'
 
-图片文件夹结构:
-    D:\\教程\\
-        ├── Moviepilot手动刮削教程.md
-        └── Moviepilot手动刮削教程.assets\\
-                ├── image-1.png
-                └── image-2.png
-
-依赖安装:
-    pip install requests
+命令行运行:
+    python publish.py                    # 上传默认文件夹所有 MD 文件
+    python publish.py "xxx.md"           # 上传单个文件
+    python publish.py "C:\\文件夹路径"    # 上传指定文件夹所有 MD 文件
 """
 
 import os
@@ -33,6 +29,9 @@ GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"  # 替换为你的 GitHub Personal Access Tok
 GITHUB_REPO = "nasplayer/my-blog"    # 你的 GitHub 仓库
 GITHUB_BRANCH = "main"               # 分支名
 BLOG_URL = "https://nasplayer.de5.net"  # 你的博客地址
+
+# 默认上传文件夹（直接运行时使用）
+DEFAULT_FOLDER = r"C:\drive\pen的项目\Moviepilot教程"
 # ============ 配置结束 ============
 
 # GitHub API 基础 URL
@@ -91,22 +90,54 @@ def fix_markdown_content(content):
     return content
 
 
+def add_front_matter(content, title, file_path):
+    """添加或更新 front matter"""
+    # 检查是否已有 front matter
+    if content.strip().startswith('---'):
+        # 已有 front matter，更新 title 和 date
+        # 更新 title
+        content = re.sub(
+            r'^title:\s*.*$',
+            f'title: {title}',
+            content,
+            count=1,
+            flags=re.MULTILINE
+        )
+        # 更新 date
+        mod_time = datetime.fromtimestamp(file_path.stat().st_mtime)
+        content = re.sub(
+            r'^date:\s*.*$',
+            f"date: {mod_time.strftime('%Y-%m-%d')}",
+            content,
+            count=1,
+            flags=re.MULTILINE
+        )
+    else:
+        # 没有 front matter，添加
+        mod_time = datetime.fromtimestamp(file_path.stat().st_mtime)
+        front_matter = f"""---
+title: {title}
+date: {mod_time.strftime('%Y-%m-%d')}
+draft: false
+---
+
+"""
+        content = front_matter + content
+    
+    return content
+
+
 def find_assets_folder(md_file_path):
     """查找 .assets 文件夹"""
     md_path = Path(md_file_path)
     md_dir = md_path.parent
     md_name = md_path.stem  # 文件名不带扩展名
     
-    # 可能的 .assets 文件夹名称
-    possible_names = [
-        f"{md_name}.assets",  # Moviepilot手动刮削教程.assets
-        f"{md_name}.assets",  # 同上
-    ]
+    # .assets 文件夹
+    assets_path = md_dir / f"{md_name}.assets"
     
-    for name in possible_names:
-        assets_path = md_dir / name
-        if assets_path.exists() and assets_path.is_dir():
-            return assets_path
+    if assets_path.exists() and assets_path.is_dir():
+        return assets_path
     
     return None
 
@@ -196,7 +227,7 @@ def generate_slug(title):
 
 
 def publish_article(md_file_path):
-    """发布文章"""
+    """发布单篇文章"""
     md_path = Path(md_file_path)
     
     if not md_path.exists():
@@ -204,20 +235,18 @@ def publish_article(md_file_path):
         return False
     
     print(f"\n📝 处理文章: {md_path.name}")
-    print("=" * 50)
+    print("-" * 50)
     
     # 读取文件内容
     with open(md_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # 解析 front matter 获取标题
-    title_match = re.search(r'^title:\s*(.+)$', content, re.MULTILINE)
-    if title_match:
-        title = title_match.group(1).strip()
-    else:
-        title = md_path.stem
-    
+    # 获取标题（文件名）
+    title = md_path.stem
     print(f"📌 标题: {title}")
+    
+    # 添加/更新 front matter
+    content = add_front_matter(content, title, md_path)
     
     # 生成 slug
     slug = generate_slug(title)
@@ -231,7 +260,7 @@ def publish_article(md_file_path):
     uploaded_images = {}
     
     if assets_folder:
-        print(f"\n📂 找到图片文件夹: {assets_folder.name}")
+        print(f"📂 找到图片文件夹: {assets_folder.name}")
         print("📤 上传图片...")
         uploaded_images = upload_images_from_assets(assets_folder)
         
@@ -243,48 +272,79 @@ def publish_article(md_file_path):
         else:
             print("   无图片需要上传")
     else:
-        print("\n📂 未找到 .assets 文件夹（可能文章无图片）")
+        print("📂 未找到 .assets 文件夹")
     
     # 上传文章
-    print("\n📤 上传文章...")
+    print("📤 上传文章...")
     github_path = f"content/posts/{slug}.md"
     content_base64 = base64.b64encode(content.encode('utf-8')).decode()
     
     if upload_to_github(github_path, content_base64, f"发布文章: {title}"):
-        print("\n" + "=" * 50)
-        print("🎉 发布成功!")
-        print(f"📖 文章地址: {BLOG_URL}/{slug}/")
-        print(f"⚙️  管理后台: {BLOG_URL}/admin/")
+        print(f"✅ 发布成功: {BLOG_URL}/{slug}/")
         return True
     
     return False
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("=" * 50)
-        print("博客快速发布脚本")
-        print("=" * 50)
-        print("\n使用方法:")
-        print("  python publish.py <markdown文件路径>")
-        print("\n示例:")
-        print('  python publish.py "D:\\\\教程\\\\Moviepilot手动刮削教程.md"')
-        print("\n图片文件夹结构（Typora 默认）:")
-        print("  D:\\教程\\")
-        print("      ├── Moviepilot手动刮削教程.md")
-        print("      └── Moviepilot手动刮削教程.assets\\")
-        print("              ├── image-1.png")
-        print("              └── image-2.png")
-        print("\n首次使用请先修改脚本顶部的配置:")
-        print("  - GITHUB_TOKEN: 你的 GitHub Personal Access Token")
-        print("  - GITHUB_REPO: 你的 GitHub 仓库")
-        print("  - BLOG_URL: 你的博客地址")
-        print("\n依赖安装:")
-        print("  pip install requests")
-        sys.exit(1)
+def publish_folder(folder_path):
+    """批量发布文件夹中的所有 MD 文件"""
+    folder = Path(folder_path)
     
-    md_file = sys.argv[1]
-    publish_article(md_file)
+    if not folder.exists():
+        print(f"❌ 文件夹不存在: {folder_path}")
+        return
+    
+    # 查找所有 MD 文件
+    md_files = list(folder.glob("*.md"))
+    
+    if not md_files:
+        print(f"❌ 未找到 MD 文件: {folder_path}")
+        return
+    
+    print("=" * 50)
+    print(f"📚 批量发布: {folder_path}")
+    print(f"   找到 {len(md_files)} 个 MD 文件")
+    print("=" * 50)
+    
+    success_count = 0
+    for md_file in md_files:
+        if publish_article(md_file):
+            success_count += 1
+    
+    print("\n" + "=" * 50)
+    print(f"🎉 发布完成: {success_count}/{len(md_files)} 篇文章")
+    print(f"📖 博客地址: {BLOG_URL}")
+    print(f"⚙️  管理后台: {BLOG_URL}/admin/")
+    print("=" * 50)
+
+
+def main():
+    print("=" * 50)
+    print("📝 博客快速发布工具")
+    print("=" * 50)
+    
+    # 检查配置
+    if GITHUB_TOKEN == "YOUR_GITHUB_TOKEN":
+        print("\n❌ 请先修改脚本顶部的 GITHUB_TOKEN 配置！")
+        print("   获取 Token: https://github.com/settings/tokens")
+        return
+    
+    if len(sys.argv) < 2:
+        # 无参数，使用默认文件夹
+        print(f"\n📂 使用默认文件夹: {DEFAULT_FOLDER}")
+        publish_folder(DEFAULT_FOLDER)
+    else:
+        arg = sys.argv[1]
+        path = Path(arg)
+        
+        if path.is_file():
+            # 单个文件
+            publish_article(arg)
+        elif path.is_dir():
+            # 文件夹
+            publish_folder(arg)
+        else:
+            print(f"❌ 路径不存在: {arg}")
 
 
 if __name__ == "__main__":
