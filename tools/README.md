@@ -19,6 +19,7 @@
 
 | 脚本 | 功能 |
 |------|------|
+| `config.py` | **统一配置文件（只需改这个）** |
 | `publish.py` | 发布文章 |
 | `delete_article.py` | 删除文章 |
 | `clean_images.py` | 删除所有图片 |
@@ -36,55 +37,55 @@ pip install requests
 
 ## ⚙️ 配置
 
-打开 `publish.py`，修改配置区域：
+**只需修改一个文件：`config.py`**
 
-### 1. 基本配置
+### 1. 复制配置文件
+
+```bash
+# 下载后重命名
+cp config.py config.py
+```
+
+### 2. 修改配置
+
+打开 `config.py`，修改以下内容：
 
 ```python
+# GitHub 配置
 GITHUB_TOKEN = "你的GitHub Token"
 GITHUB_REPO = "nasplayer/my-blog"
 GITHUB_BRANCH = "main"
+
+# 博客配置
 BLOG_URL = "https://nasplayer.de5.net"
+
+# 默认文件夹
 DEFAULT_FOLDER = r"C:\drive\pen的项目\Moviepilot教程"
 ```
 
-### 2. 加密配置
+### 3. 其他配置（可选）
 
 ```python
+# 加密配置
 ENCRYPTED_POSTS = {
-    "非公开": "你的密码",  # 标题包含"非公开"的文章会加密
+    "非公开": "你的密码",
 }
-DEFAULT_PASSWORD = None  # 其他文章不加密
-```
 
-### 3. 置顶配置
+# 置顶配置
+PINNED_KEYWORDS = ["重要", "置顶"]
 
-```python
-PINNED_KEYWORDS = [
-    "重要",    # 标题包含"重要"的文章会置顶
-    "置顶",    # 标题包含"置顶"的文章会置顶
-]
-```
-
-### 4. 分类配置
-
-```python
+# 分类配置
 CATEGORY_RULES = {
-    "MoviePilot": "MoviePilot教程",  # 标题含MoviePilot归类到MoviePilot教程
-    "NAS": "NAS教程",               # 标题含NAS归类到NAS教程
+    "MoviePilot": "MoviePilot教程",
 }
-```
 
-### 5. 标签配置
-
-```python
+# 标签配置
 TAG_RULES = {
     "MoviePilot": ["MoviePilot", "教程"],
-    "认证": ["认证", "安全"],
 }
 ```
 
-### 6. 获取 GitHub Token
+### 4. 获取 GitHub Token
 
 1. 打开 https://github.com/settings/tokens
 2. 点击 **Generate new token (classic)**

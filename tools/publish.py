@@ -28,52 +28,20 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# ============ 配置区域（请修改为你自己的） ============
-GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"  # 替换为你的 GitHub Personal Access Token
-GITHUB_REPO = "nasplayer/my-blog"    # 你的 GitHub 仓库
-GITHUB_BRANCH = "main"               # 分支名
-BLOG_URL = "https://nasplayer.de5.net"  # 你的博客地址
+# ============ 导入统一配置 ============
+try:
+    from config import (
+        GITHUB_TOKEN, GITHUB_REPO, GITHUB_BRANCH,
+        BLOG_URL, DEFAULT_FOLDER,
+        ENCRYPTED_POSTS, DEFAULT_PASSWORD,
+        PINNED_KEYWORDS, CATEGORY_RULES, TAG_RULES,
+        MAX_RETRIES, RETRY_DELAY
+    )
+except ImportError:
+    print("❌ 请先创建 config.py 配置文件")
+    print("   可以复制 config.py.example 并重命名为 config.py")
+    sys.exit(1)
 
-# 默认上传文件夹（直接运行时使用）
-DEFAULT_FOLDER = r"C:\drive\pen的项目\Moviepilot教程"
-
-# 重试配置
-MAX_RETRIES = 5  # 最大重试次数
-RETRY_DELAY = 3  # 重试间隔（秒）
-
-# ============ 加密文章配置 ============
-# 格式: {"文章标题关键词": "密码"}
-# 标题关键词会进行模糊匹配，包含该关键词的文章都会加密
-ENCRYPTED_POSTS = {
-    "非公开": "nasplayer",  # 标题包含"非公开"的文章，密码为 nasplayer
-}
-
-# 默认密码（如果文章需要加密但未在上面配置，则使用此密码）
-# 设为 None 表示不使用默认密码
-DEFAULT_PASSWORD = None
-
-# ============ 置顶文章配置 ============
-# 标题包含这些关键词的文章会自动置顶
-PINNED_KEYWORDS = [
-    # "重要",
-    # "置顶",
-]
-
-# ============ 分类配置 ============
-# 格式: {"标题关键词": "分类名"}
-# 标题包含关键词的文章会自动归类
-CATEGORY_RULES = {
-    # "MoviePilot": "MoviePilot教程",
-    # "NAS": "NAS教程",
-}
-
-# ============ 标签配置 ============
-# 格式: {"标题关键词": ["标签1", "标签2"]}
-# 标题包含关键词的文章会自动添加标签
-TAG_RULES = {
-    # "MoviePilot": ["MoviePilot", "教程"],
-    # "认证": ["认证", "安全"],
-}
 # ============ 配置结束 ============
 
 # GitHub API 基础 URL

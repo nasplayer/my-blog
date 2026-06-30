@@ -5,17 +5,22 @@
 删除文章同时删除相关图片
 """
 
+import sys
+import re
+import base64
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-import re
 
-# ============ 配置 ============
-GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"  # 替换为你的 Token
-GITHUB_REPO = "nasplayer/my-blog"
-GITHUB_BRANCH = "main"
-BLOG_URL = "https://nasplayer.de5.net"
-# ============ 配置结束 ============
+# ============ 导入统一配置 ============
+try:
+    from config import (
+        GITHUB_TOKEN, GITHUB_REPO, GITHUB_BRANCH,
+        BLOG_URL, MAX_RETRIES, RETRY_DELAY
+    )
+except ImportError:
+    print("❌ 请先创建 config.py 配置文件")
+    sys.exit(1)
 
 API_BASE = "https://api.github.com"
 
