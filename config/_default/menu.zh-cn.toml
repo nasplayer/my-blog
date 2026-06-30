@@ -23,3 +23,9 @@
   name = "关于"
   url = "/about/"
   weight = 4
+
+[[main]]
+  identifier = "admin"
+  name = "管理"
+  url = "/admin/"
+  weight = 5
