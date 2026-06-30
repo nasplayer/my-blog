@@ -2,9 +2,13 @@
 
 无需本地 Git 环境，直接通过 GitHub API 发布文章。
 
+**支持 Typora 图片文件夹结构（.assets 文件夹）**
+
 ## 下载
 
-从 GitHub 下载整个 `tools` 文件夹，或只下载 `publish.py` 文件。
+从 GitHub 下载 `publish.py` 文件。
+
+**下载地址**: https://github.com/nasplayer/my-blog/tree/main/tools
 
 ## 安装依赖
 
@@ -14,7 +18,7 @@ pip install requests
 
 ## 配置
 
-打开 `publish.py`，修改顶部的配置：
+打开 `publish.py`，修改第 24-27 行：
 
 ```python
 GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"  # 替换为你的 GitHub Personal Access Token
@@ -33,74 +37,106 @@ BLOG_URL = "https://nasplayer.de5.net"  # 你的博客地址
 ## 使用方法
 
 ```bash
-python publish.py "D:\我的文档\教程.md"
+python publish.py "D:\教程\Moviepilot手动刮削教程.md"
 ```
+
+## 图片文件夹结构
+
+脚本自动识别 Typora 的 `.assets` 文件夹：
+
+```
+D:\教程\
+    ├── Moviepilot手动刮削教程.md
+    └── Moviepilot手动刮削教程.assets\
+            ├── image-1.png
+            └── image-2.png
+```
+
+脚本会：
+1. 自动找到 `Moviepilot手动刮削教程.assets` 文件夹
+2. 上传里面所有图片到 GitHub
+3. 修正 MD 文件中的图片路径
 
 ## 功能说明
 
 | 功能 | 说明 |
 |------|------|
+| ✅ 自动识别 .assets 文件夹 | 无需手动指定图片路径 |
 | ✅ 自动修复日期格式 | `2026-06-30T15:01:00.000Z` → `2026-06-30` |
 | ✅ 自动修复标题转义 | `\# 标题` → `# 标题` |
 | ✅ 自动上传图片 | 复制到 `static/images/` 并修正路径 |
+| ✅ 支持多种图片格式 | png, jpg, jpeg, gif, webp, svg, bmp |
 | ✅ 自动提交推送 | 通过 GitHub API 提交 |
-
-## 图片路径说明
-
-MD 文件中的图片路径支持：
-
-| 格式 | 示例 |
-|------|------|
-| 相对路径 | `./images/xxx.png` |
-| 相对路径 | `images/xxx.png` |
-| 同目录 | `xxx.png` |
-| HTML 标签 | `<img src="xxx.png">` |
 
 ## 注意事项
 
 1. MD 文件使用 UTF-8 编码
 2. 发布后等待 1-2 分钟让 Cloudflare Pages 部署
-3. 图片文件名不要有特殊字符和中文
+3. 图片文件名不要有特殊字符和中文（建议用英文和数字）
+4. `.assets` 文件夹要和 MD 文件在同一目录
 
-## 示例
+## 完整示例
 
 假设你有以下目录结构：
 
 ```
 D:\教程\
-  ├── MoviePilot使用教程.md
-  └── images\
-        ├── screenshot1.png
-        └── screenshot2.png
+    ├── Moviepilot手动刮削教程.md
+    └── Moviepilot手动刮削教程.assets\
+            ├── step1.png
+            ├── step2.png
+            └── step3.png
 ```
 
 MD 文件内容：
 
 ```markdown
 ---
-title: MoviePilot使用教程
+title: Moviepilot手动刮削教程
 date: 2026-06-30
 ---
 
-# MoviePilot使用教程
+# Moviepilot手动刮削教程
 
-## 安装步骤
+## 第一步
 
-![截图1](images/screenshot1.png)
+![步骤1](Moviepilot手动刮削教程.assets/step1.png)
 
-## 配置说明
+## 第二步
 
-![截图2](images/screenshot2.png)
+![步骤2](Moviepilot手动刮削教程.assets/step2.png)
+
+## 第三步
+
+<img src="Moviepilot手动刮削教程.assets/step3.png" alt="步骤3">
 ```
 
 运行命令：
 
 ```bash
-python publish.py "D:\教程\MoviePilot使用教程.md"
+python publish.py "D:\教程\Moviepilot手动刮削教程.md"
 ```
 
-脚本会自动：
-1. 上传 `screenshot1.png` 和 `screenshot2.png` 到 GitHub
-2. 修正 MD 文件中的图片路径
-3. 上传 MD 文件到 GitHub
-4. Cloudflare Pages 自动部署
+输出：
+
+```
+📝 处理文章: Moviepilot手动刮削教程.md
+==================================================
+📌 标题: Moviepilot手动刮削教程
+🔗 Slug: moviepilot
+
+📂 找到图片文件夹: Moviepilot手动刮削教程.assets
+📤 上传图片...
+  ✅ 已上传: static/images/step1.png
+  ✅ 已上传: static/images/step2.png
+  ✅ 已上传: static/images/step3.png
+   已上传 3 张图片
+
+📤 上传文章...
+  ✅ 已上传: content/posts/moviepilot.md
+
+==================================================
+🎉 发布成功!
+📖 文章地址: https://nasplayer.de5.net/moviepilot/
+⚙️  管理后台: https://nasplayer.de5.net/admin/
+```

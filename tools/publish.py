@@ -2,10 +2,17 @@
 # -*- coding: utf-8 -*-
 """
 博客快速发布脚本 - Windows + PyCharm 版
-无需本地 Git，直接通过 GitHub API 发布
+支持 Typora 图片文件夹结构（.assets 文件夹）
 
 使用方法:
-    python publish.py "D:\\我的文档\\教程.md"
+    python publish.py "D:\\教程\\Moviepilot手动刮削教程.md"
+
+图片文件夹结构:
+    D:\\教程\\
+        ├── Moviepilot手动刮削教程.md
+        └── Moviepilot手动刮削教程.assets\\
+                ├── image-1.png
+                └── image-2.png
 
 依赖安装:
     pip install requests
@@ -84,10 +91,49 @@ def fix_markdown_content(content):
     return content
 
 
-def process_images(content, md_file_path):
-    """处理图片，上传到 GitHub 并修正路径"""
-    md_dir = Path(md_file_path).parent
-    uploaded_images = []
+def find_assets_folder(md_file_path):
+    """查找 .assets 文件夹"""
+    md_path = Path(md_file_path)
+    md_dir = md_path.parent
+    md_name = md_path.stem  # 文件名不带扩展名
+    
+    # 可能的 .assets 文件夹名称
+    possible_names = [
+        f"{md_name}.assets",  # Moviepilot手动刮削教程.assets
+        f"{md_name}.assets",  # 同上
+    ]
+    
+    for name in possible_names:
+        assets_path = md_dir / name
+        if assets_path.exists() and assets_path.is_dir():
+            return assets_path
+    
+    return None
+
+
+def upload_images_from_assets(assets_folder):
+    """上传 .assets 文件夹中的所有图片"""
+    uploaded = {}  # {原文件名: GitHub路径}
+    
+    # 支持的图片格式
+    image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp'}
+    
+    for file_path in assets_folder.iterdir():
+        if file_path.is_file() and file_path.suffix.lower() in image_extensions:
+            img_name = file_path.name
+            github_path = f"static/images/{img_name}"
+            
+            with open(file_path, 'rb') as f:
+                img_content = base64.b64encode(f.read()).decode()
+            
+            if upload_to_github(github_path, img_content, f"上传图片 {img_name}"):
+                uploaded[img_name] = f"/images/{img_name}"
+    
+    return uploaded
+
+
+def fix_image_paths(content, assets_folder, uploaded_images):
+    """修正 MD 文件中的图片路径"""
     
     # 匹配 Markdown 图片语法 ![alt](path)
     def replace_md_img(match):
@@ -97,17 +143,15 @@ def process_images(content, md_file_path):
         if img_path.startswith('http'):
             return match.group(0)
         
-        local_path = md_dir / img_path
-        if local_path.exists():
-            img_name = local_path.name
-            github_path = f"static/images/{img_name}"
-            
-            with open(local_path, 'rb') as f:
-                img_content = base64.b64encode(f.read()).decode()
-            
-            if upload_to_github(github_path, img_content, f"上传图片 {img_name}"):
-                uploaded_images.append(img_name)
-                return f'![{alt}](/images/{img_name})'
+        # URL 解码
+        img_path = unquote(img_path)
+        
+        # 获取图片文件名
+        img_name = Path(img_path).name
+        
+        # 如果图片已上传，替换路径
+        if img_name in uploaded_images:
+            return f'![{alt}]({uploaded_images[img_name]})'
         
         return match.group(0)
     
@@ -122,17 +166,12 @@ def process_images(content, md_file_path):
         # URL 解码
         img_path = unquote(img_path)
         
-        local_path = md_dir / img_path
-        if local_path.exists():
-            img_name = local_path.name
-            github_path = f"static/images/{img_name}"
-            
-            with open(local_path, 'rb') as f:
-                img_content = base64.b64encode(f.read()).decode()
-            
-            if upload_to_github(github_path, img_content, f"上传图片 {img_name}"):
-                uploaded_images.append(img_name)
-                return f'![图片](/images/{img_name})'
+        # 获取图片文件名
+        img_name = Path(img_path).name
+        
+        # 如果图片已上传，替换为 Markdown 格式
+        if img_name in uploaded_images:
+            return f'![图片]({uploaded_images[img_name]})'
         
         return full_tag
     
@@ -142,7 +181,7 @@ def process_images(content, md_file_path):
     # 处理 HTML 图片
     content = re.sub(r'<img[^>]+src=["\']([^"\']+)["\'][^>]*>', replace_html_img, content)
     
-    return content, uploaded_images
+    return content
 
 
 def generate_slug(title):
@@ -187,14 +226,24 @@ def publish_article(md_file_path):
     # 修复内容
     content = fix_markdown_content(content)
     
-    # 处理图片
-    print("\n📤 处理图片...")
-    content, uploaded_images = process_images(content, md_file_path)
+    # 查找 .assets 文件夹
+    assets_folder = find_assets_folder(md_file_path)
+    uploaded_images = {}
     
-    if uploaded_images:
-        print(f"   已上传 {len(uploaded_images)} 张图片")
+    if assets_folder:
+        print(f"\n📂 找到图片文件夹: {assets_folder.name}")
+        print("📤 上传图片...")
+        uploaded_images = upload_images_from_assets(assets_folder)
+        
+        if uploaded_images:
+            print(f"   已上传 {len(uploaded_images)} 张图片")
+            
+            # 修正图片路径
+            content = fix_image_paths(content, assets_folder, uploaded_images)
+        else:
+            print("   无图片需要上传")
     else:
-        print("   无图片需要上传")
+        print("\n📂 未找到 .assets 文件夹（可能文章无图片）")
     
     # 上传文章
     print("\n📤 上传文章...")
@@ -219,7 +268,13 @@ def main():
         print("\n使用方法:")
         print("  python publish.py <markdown文件路径>")
         print("\n示例:")
-        print('  python publish.py "D:\\\\教程\\\\我的文章.md"')
+        print('  python publish.py "D:\\\\教程\\\\Moviepilot手动刮削教程.md"')
+        print("\n图片文件夹结构（Typora 默认）:")
+        print("  D:\\教程\\")
+        print("      ├── Moviepilot手动刮削教程.md")
+        print("      └── Moviepilot手动刮削教程.assets\\")
+        print("              ├── image-1.png")
+        print("              └── image-2.png")
         print("\n首次使用请先修改脚本顶部的配置:")
         print("  - GITHUB_TOKEN: 你的 GitHub Personal Access Token")
         print("  - GITHUB_REPO: 你的 GitHub 仓库")
