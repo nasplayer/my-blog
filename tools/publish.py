@@ -20,6 +20,8 @@ import sys
 import base64
 import re
 import time
+import json
+import hashlib
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
@@ -43,6 +45,66 @@ except ImportError:
     sys.exit(1)
 
 # ============ 配置结束 ============
+
+# 缓存文件路径
+CACHE_FILE = Path(__file__).parent / ".publish_cache.json"
+
+
+def load_cache():
+    """加载本地缓存"""
+    if CACHE_FILE.exists():
+        try:
+            with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+def save_cache(cache):
+    """保存本地缓存"""
+    with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(cache, f, indent=2, ensure_ascii=False)
+
+
+def get_file_hash(file_path):
+    """计算文件 hash"""
+    hasher = hashlib.md5()
+    with open(file_path, 'rb') as f:
+        hasher.update(f.read())
+    return hasher.hexdigest()
+
+
+def check_file_changed(file_path, cache_key, cache):
+    """检查文件是否有变化（使用本地缓存）"""
+    if cache_key not in cache:
+        return True  # 缓存中没有，需要上传
+    
+    cached_info = cache[cache_key]
+    local_size = file_path.stat().st_size
+    local_mtime = file_path.stat().st_mtime
+    
+    # 先比较大小和修改时间（快速）
+    if cached_info.get('size') != local_size:
+        return True
+    if cached_info.get('mtime') != local_mtime:
+        # 修改时间变了，再比较 hash（确保真的变了）
+        local_hash = get_file_hash(file_path)
+        if cached_info.get('hash') != local_hash:
+            return True
+    
+    return False  # 没变化
+
+
+def update_cache(cache, cache_key, file_path):
+    """更新缓存"""
+    cache[cache_key] = {
+        'size': file_path.stat().st_size,
+        'mtime': file_path.stat().st_mtime,
+        'hash': get_file_hash(file_path),
+        'time': datetime.now().isoformat(),
+    }
+    save_cache(cache)
 
 # GitHub API 基础 URL
 API_BASE = "https://api.github.com"
@@ -351,12 +413,13 @@ def get_remote_file_info(path):
     return None
 
 
-def upload_images_from_assets(assets_folder, slug):
+def upload_images_from_assets(assets_folder, slug, cache):
     """上传 .assets 文件夹中的所有图片
     
     Args:
         assets_folder: .assets 文件夹路径
         slug: 文章的 slug，用作图片路径前缀，避免同名冲突
+        cache: 本地缓存
     
     Returns:
         dict: {原文件名: GitHub路径}
@@ -369,26 +432,26 @@ def upload_images_from_assets(assets_folder, slug):
     for file_path in assets_folder.iterdir():
         if file_path.is_file() and file_path.suffix.lower() in image_extensions:
             img_name = file_path.name
-            local_size = file_path.stat().st_size
             
             # 使用 slug 作为子文件夹，避免同名冲突
             github_path = f"static/images/{slug}/{img_name}"
             web_path = f"/images/{slug}/{img_name}"
             
-            # 快速检查：先比较文件大小
-            remote_info = get_remote_file_info(github_path)
-            if remote_info and remote_info['size'] == local_size:
-                # 大小相同，大概率没变，跳过
+            # 使用本地缓存检查是否需要上传
+            cache_key = f"img:{github_path}"
+            if not check_file_changed(file_path, cache_key, cache):
                 print(f"  ⏭️ 跳过: {img_name}")
                 uploaded[img_name] = web_path
                 continue
             
-            # 大小不同或远程不存在，需要上传
+            # 需要上传
             with open(file_path, 'rb') as f:
                 img_content = base64.b64encode(f.read()).decode()
             
             if upload_to_github(github_path, img_content, f"上传图片 {slug}/{img_name}"):
                 uploaded[img_name] = web_path
+                # 更新缓存
+                update_cache(cache, cache_key, file_path)
     
     return uploaded
 
@@ -456,7 +519,7 @@ def generate_slug(title):
     return slug
 
 
-def publish_article(md_file_path):
+def publish_article(md_file_path, cache):
     """发布单篇文章"""
     md_path = Path(md_file_path)
     
@@ -513,7 +576,7 @@ def publish_article(md_file_path):
         print(f"📂 找到图片文件夹: {assets_folder.name}")
         print("📤 上传图片...")
         # 传入 slug，图片会存到 static/images/{slug}/ 目录
-        uploaded_images = upload_images_from_assets(assets_folder, slug)
+        uploaded_images = upload_images_from_assets(assets_folder, slug, cache)
         
         if uploaded_images:
             print(f"   已上传 {len(uploaded_images)} 张图片")
@@ -528,24 +591,29 @@ def publish_article(md_file_path):
     # 上传文章
     github_path = f"content/posts/{slug}.md"
     
-    # 快速检查：比较文件大小
-    remote_info = get_remote_file_info(github_path)
-    local_size = len(content.encode('utf-8'))
+    # 使用本地缓存检查是否需要上传
+    # 先保存临时文件用于比较
+    temp_file = Path(__file__).parent / f".temp_{slug}.md"
+    with open(temp_file, 'w', encoding='utf-8') as f:
+        f.write(content)
     
-    if remote_info and remote_info['size'] == local_size:
-        # 大小相同，再比较内容（防止碰巧大小相同）
-        remote_content = get_remote_content(github_path)
-        if not content_needs_update(content, remote_content):
-            print("⏭️ 文章无变化，跳过上传")
-            return True
+    cache_key = f"article:{github_path}"
+    if not check_file_changed(temp_file, cache_key, cache):
+        print("⏭️ 文章无变化，跳过上传")
+        temp_file.unlink()  # 删除临时文件
+        return True
     
     print("📤 上传文章...")
     content_base64 = base64.b64encode(content.encode('utf-8')).decode()
     
     if upload_to_github(github_path, content_base64, f"发布文章: {title}"):
         print(f"✅ 发布成功: {BLOG_URL}/{slug}/")
+        # 更新缓存
+        update_cache(cache, cache_key, temp_file)
+        temp_file.unlink()  # 删除临时文件
         return True
     
+    temp_file.unlink()  # 删除临时文件
     return False
 
 
@@ -564,14 +632,18 @@ def publish_folder(folder_path):
         print(f"❌ 未找到 MD 文件: {folder_path}")
         return
     
+    # 加载缓存
+    cache = load_cache()
+    
     print("=" * 50)
     print(f"📚 批量发布: {folder_path}")
     print(f"   找到 {len(md_files)} 个 MD 文件")
+    print(f"   缓存记录: {len(cache)} 条")
     print("=" * 50)
     
     success_count = 0
     for md_file in md_files:
-        if publish_article(md_file):
+        if publish_article(md_file, cache):
             success_count += 1
     
     print("\n" + "=" * 50)
@@ -608,9 +680,12 @@ def main():
         arg = sys.argv[1]
         path = Path(arg)
         
+        # 加载缓存
+        cache = load_cache()
+        
         if path.is_file():
             # 单个文件
-            publish_article(arg)
+            publish_article(arg, cache)
         elif path.is_dir():
             # 文件夹
             publish_folder(arg)
