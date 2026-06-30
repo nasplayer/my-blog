@@ -5,8 +5,12 @@ export async function onRequestGet(context) {
   const { request } = context;
   const url = new URL(request.url);
 
-  // 从请求中获取 redirect_uri
-  const redirectUri = url.searchParams.get("redirect_uri") || `${url.origin}/admin/`;
+  // 从请求中获取 redirect_uri，默认为 /admin（不带斜杠）
+  let redirectUri = url.searchParams.get("redirect_uri") || `${url.origin}/admin`;
+  // 确保 redirect_uri 不以 / 结尾
+  if (redirectUri.endsWith('/')) {
+    redirectUri = redirectUri.slice(0, -1);
+  }
 
   // 生成 state
   const state = Math.random().toString(36).substring(2, 15);
