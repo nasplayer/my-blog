@@ -3,7 +3,7 @@ title: Moviepilot用户认证教程
 date: 2026-05-30
 draft: false
 toc:
-  ordered: false  # 关闭自动序号
+  ordered: false
 ---
 
 # Moviepilot用户认证教程
