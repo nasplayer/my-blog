@@ -51,6 +51,29 @@ ENCRYPTED_POSTS = {
 # 默认密码（如果文章需要加密但未在上面配置，则使用此密码）
 # 设为 None 表示不使用默认密码
 DEFAULT_PASSWORD = None
+
+# ============ 置顶文章配置 ============
+# 标题包含这些关键词的文章会自动置顶
+PINNED_KEYWORDS = [
+    # "重要",
+    # "置顶",
+]
+
+# ============ 分类配置 ============
+# 格式: {"标题关键词": "分类名"}
+# 标题包含关键词的文章会自动归类
+CATEGORY_RULES = {
+    # "MoviePilot": "MoviePilot教程",
+    # "NAS": "NAS教程",
+}
+
+# ============ 标签配置 ============
+# 格式: {"标题关键词": ["标签1", "标签2"]}
+# 标题包含关键词的文章会自动添加标签
+TAG_RULES = {
+    # "MoviePilot": ["MoviePilot", "教程"],
+    # "认证": ["认证", "安全"],
+}
 # ============ 配置结束 ============
 
 # GitHub API 基础 URL
@@ -133,6 +156,31 @@ def get_password_for_title(title):
     return DEFAULT_PASSWORD
 
 
+def get_category_for_title(title):
+    """根据标题获取分类"""
+    for keyword, category in CATEGORY_RULES.items():
+        if keyword in title:
+            return category
+    return None
+
+
+def get_tags_for_title(title):
+    """根据标题获取标签"""
+    tags = []
+    for keyword, tag_list in TAG_RULES.items():
+        if keyword in title:
+            tags.extend(tag_list)
+    return list(set(tags)) if tags else None  # 去重
+
+
+def is_pinned(title):
+    """检查文章是否需要置顶"""
+    for keyword in PINNED_KEYWORDS:
+        if keyword in title:
+            return True
+    return False
+
+
 def fix_markdown_content(content):
     """修复 Markdown 内容"""
     # 1. 修复 \# 转义
@@ -148,7 +196,7 @@ def fix_markdown_content(content):
     return content
 
 
-def add_front_matter(content, title, file_path, password=None):
+def add_front_matter(content, title, file_path, password=None, category=None, tags=None, pinned=False):
     """添加或更新 front matter"""
     # 检查是否已有 front matter
     if content.strip().startswith('---'):
@@ -172,7 +220,6 @@ def add_front_matter(content, title, file_path, password=None):
         )
         # 更新或添加 password
         if password:
-            # 检查是否已有 password
             if re.search(r'^password:\s*.*$', content, re.MULTILINE):
                 content = re.sub(
                     r'^password:\s*.*$',
@@ -182,10 +229,61 @@ def add_front_matter(content, title, file_path, password=None):
                     flags=re.MULTILINE
                 )
             else:
-                # 在 --- 之前添加 password
                 content = re.sub(
                     r'^---\n',
                     f'---\npassword: "{password}"\n',
+                    content,
+                    count=1
+                )
+        # 更新或添加 pinned
+        if pinned:
+            if re.search(r'^pinned:\s*.*$', content, re.MULTILINE):
+                content = re.sub(
+                    r'^pinned:\s*.*$',
+                    'pinned: true',
+                    content,
+                    count=1,
+                    flags=re.MULTILINE
+                )
+            else:
+                content = re.sub(
+                    r'^---\n',
+                    f'---\npinned: true\n',
+                    content,
+                    count=1
+                )
+        # 更新或添加 categories
+        if category:
+            if re.search(r'^categories:\s*.*$', content, re.MULTILINE):
+                content = re.sub(
+                    r'^categories:\s*.*$',
+                    f'categories: ["{category}"]',
+                    content,
+                    count=1,
+                    flags=re.MULTILINE
+                )
+            else:
+                content = re.sub(
+                    r'^---\n',
+                    f'---\ncategories: ["{category}"]\n',
+                    content,
+                    count=1
+                )
+        # 更新或添加 tags
+        if tags:
+            tags_str = ', '.join([f'"{t}"' for t in tags])
+            if re.search(r'^tags:\s*.*$', content, re.MULTILINE):
+                content = re.sub(
+                    r'^tags:\s*.*$',
+                    f'tags: [{tags_str}]',
+                    content,
+                    count=1,
+                    flags=re.MULTILINE
+                )
+            else:
+                content = re.sub(
+                    r'^---\n',
+                    f'---\ntags: [{tags_str}]\n',
                     content,
                     count=1
                 )
@@ -196,8 +294,15 @@ def add_front_matter(content, title, file_path, password=None):
 title: {title}
 date: {mod_time.strftime('%Y-%m-%d')}
 """
+        if pinned:
+            front_matter += 'pinned: true\n'
         if password:
             front_matter += f'password: "{password}"\n'
+        if category:
+            front_matter += f'categories: ["{category}"]\n'
+        if tags:
+            tags_str = ', '.join([f'"{t}"' for t in tags])
+            front_matter += f'tags: [{tags_str}]\n'
         
         front_matter += """draft: false
 ---
@@ -343,8 +448,23 @@ def publish_article(md_file_path):
     if password:
         print(f"🔐 加密文章，密码: {password}")
     
+    # 检查是否需要置顶
+    pinned = is_pinned(title)
+    if pinned:
+        print("📌 置顶文章")
+    
+    # 获取分类
+    category = get_category_for_title(title)
+    if category:
+        print(f"📂 分类: {category}")
+    
+    # 获取标签
+    tags = get_tags_for_title(title)
+    if tags:
+        print(f"🏷️ 标签: {', '.join(tags)}")
+    
     # 添加/更新 front matter
-    content = add_front_matter(content, title, md_path, password)
+    content = add_front_matter(content, title, md_path, password, category, tags, pinned)
     
     # 生成 slug
     slug = generate_slug(title)
