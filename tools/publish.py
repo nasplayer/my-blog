@@ -103,6 +103,44 @@ def get_headers():
     }
 
 
+def get_remote_content(path):
+    """获取远程文件内容"""
+    url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{path}"
+    params = {"ref": GITHUB_BRANCH}
+    resp = SESSION.get(url, headers=get_headers(), params=params, timeout=30)
+    
+    if resp.status_code == 200:
+        import base64
+        content = base64.b64decode(resp.json()['content']).decode('utf-8', errors='ignore')
+        return content
+    return None
+
+
+def get_remote_binary_content(path):
+    """获取远程二进制文件内容"""
+    url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{path}"
+    params = {"ref": GITHUB_BRANCH}
+    resp = SESSION.get(url, headers=get_headers(), params=params, timeout=30)
+    
+    if resp.status_code == 200:
+        import base64
+        content = base64.b64decode(resp.json()['content'])
+        return content
+    return None
+
+
+def content_needs_update(local_content, remote_content):
+    """比较内容是否需要更新"""
+    if remote_content is None:
+        return True  # 远程不存在
+    
+    # 标准化比较
+    local_normalized = local_content.strip().replace('\r\n', '\n')
+    remote_normalized = remote_content.strip().replace('\r\n', '\n')
+    
+    return local_normalized != remote_normalized
+
+
 def upload_to_github(path, content, message):
     """上传文件到 GitHub（带重试）"""
     url = f"{API_BASE}/repos/{GITHUB_REPO}/contents/{path}"
@@ -352,10 +390,22 @@ def upload_images_from_assets(assets_folder, slug):
             github_path = f"static/images/{slug}/{img_name}"
             web_path = f"/images/{slug}/{img_name}"
             
+            # 读取本地图片
             with open(file_path, 'rb') as f:
-                img_content = base64.b64encode(f.read()).decode()
+                local_img_content = f.read()
             
-            if upload_to_github(github_path, img_content, f"上传图片 {slug}/{img_name}"):
+            # 获取远程图片
+            remote_img_content = get_remote_binary_content(github_path)
+            
+            # 比较是否需要上传
+            if remote_img_content and local_img_content == remote_img_content:
+                print(f"  ⏭️ 跳过（无变化）: {img_name}")
+                uploaded[img_name] = web_path
+                continue
+            
+            # 需要上传
+            img_content_b64 = base64.b64encode(local_img_content).decode()
+            if upload_to_github(github_path, img_content_b64, f"上传图片 {slug}/{img_name}"):
                 uploaded[img_name] = web_path
     
     return uploaded
@@ -494,8 +544,15 @@ def publish_article(md_file_path):
         print("📂 未找到 .assets 文件夹")
     
     # 上传文章
-    print("📤 上传文章...")
     github_path = f"content/posts/{slug}.md"
+    
+    # 检查是否需要更新
+    remote_content = get_remote_content(github_path)
+    if not content_needs_update(content, remote_content):
+        print("⏭️ 文章无变化，跳过上传")
+        return True
+    
+    print("📤 上传文章...")
     content_base64 = base64.b64encode(content.encode('utf-8')).decode()
     
     if upload_to_github(github_path, content_base64, f"发布文章: {title}"):
